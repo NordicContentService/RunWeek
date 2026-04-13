@@ -522,40 +522,40 @@ function getCurrentWeekIndex(y, m) {
 }
 
 function getPrev6Weeks(y, m) {
-  // Build a flat list of all weeks up to (but not including) the current week,
-  // then return the last 6 (i.e. the week before current + 5 more before that).
+  // Collect weeks newest-first, then reverse at the end for oldest-to-newest display.
   let collected = [];
 
-  // Determine the current week index in the viewed month
   const curWeekIdx = getCurrentWeekIndex(y, m);
 
-  // First, collect weeks in the current month that come before the current week
+  // Add weeks in the current month that come before the current week (newest first)
   if (curWeekIdx > 0) {
-    for (let w = 0; w < curWeekIdx; w++) {
+    for (let w = curWeekIdx - 1; w >= 0; w--) {
       const km = calcWeekKm(y, m, w);
       const off = getOffset(y, m);
       const startDay = Math.max(1, w * 7 - off + 1);
       const d = new Date(y, m, startDay);
       collected.push({ km, label: d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) });
-    }
-  }
-
-  // If we still need more weeks, go back through previous months
-  let sy = y, sm = m;
-  while (collected.length < 6) {
-    sm--; if (sm < 0) { sm = 11; sy--; }
-    const wc = getWeeks(sy, sm);
-    for (let w = 0; w < wc; w++) {
-      const km = calcWeekKm(sy, sm, w);
-      const off = getOffset(sy, sm);
-      const startDay = Math.max(1, w * 7 - off + 1);
-      const d = new Date(sy, sm, startDay);
-      collected.unshift({ km, label: d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) });
       if (collected.length >= 6) break;
     }
   }
 
-  return collected.slice(-6);
+  // Go back through previous months if we still need more
+  let sy = y, sm = m;
+  while (collected.length < 6) {
+    sm--; if (sm < 0) { sm = 11; sy--; }
+    const wc = getWeeks(sy, sm);
+    for (let w = wc - 1; w >= 0; w--) {
+      const km = calcWeekKm(sy, sm, w);
+      const off = getOffset(sy, sm);
+      const startDay = Math.max(1, w * 7 - off + 1);
+      const d = new Date(sy, sm, startDay);
+      collected.push({ km, label: d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) });
+      if (collected.length >= 6) break;
+    }
+  }
+
+  // Reverse so oldest is at top, most recent at bottom
+  return collected.slice(0, 6).reverse();
 }
 
 function calcAvg6Top3(y, m) {
