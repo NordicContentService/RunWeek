@@ -71,39 +71,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 18px 20px 14px;
+    padding: 14px 20px 12px;
     border-bottom: 1px solid var(--border);
-  }
-
-  .date-badge {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .date-day {
-    font-size: 48px;
-    font-weight: 600;
-    color: var(--orange);
-    line-height: 1;
-  }
-
-  .date-rest {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 1px;
-  }
-
-  .date-month {
-    font-size: 16px;
-    font-weight: 500;
-    color: var(--text-primary);
-  }
-
-  .date-year {
-    font-size: 13px;
-    color: var(--text-secondary);
   }
 
   .nav-group {
@@ -139,14 +108,15 @@
   .toolbar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     padding: 10px 20px 8px;
   }
 
   .legend {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px 8px;
+    gap: 4px 0;
+    width: 100%;
+    justify-content: space-between;
   }
 
   .legend-item {
@@ -667,23 +637,12 @@
 
 <div class="app">
   <div class="app-header">
-    <div class="date-badge">
-      <div class="date-day" id="todayNum"></div>
-      <div class="date-rest">
-        <div class="date-month" id="todayMonth"></div>
-        <div class="date-year" id="todayYear"></div>
-      </div>
-    </div>
     <div class="nav-group">
       <button class="nav-btn" id="prevBtn">&#8592;</button>
       <div class="month-title" id="monthTitle"></div>
       <button class="nav-btn" id="nextBtn">&#8594;</button>
     </div>
-  </div>
-
-  <div class="toolbar">
-    <div class="legend" id="legend"></div>
-    <div class="toolbar-right">
+    <div class="toolbar-right" style="position:relative;">
       <span class="saved-indicator" id="savedIndicator">saved</span>
       <button class="menu-btn" id="menuBtn" aria-label="Menu">
         <span></span><span></span><span></span>
@@ -708,6 +667,10 @@
         </button>
       </div>
     </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="legend" id="legend"></div>
   </div>
 
   <div class="confirm-box" id="confirmBox">
@@ -940,9 +903,6 @@ function renderCalendar() {
     new Date(y,m,1).toLocaleDateString('en-GB',{month:'long',year:'numeric'});
 
   const isCurrentMonth = now.getFullYear() === y && now.getMonth() === m;
-  document.getElementById('todayNum').textContent = isCurrentMonth ? now.getDate() : new Date(y,m,1).getDate();
-  document.getElementById('todayMonth').textContent = new Date(y,m,1).toLocaleDateString('en-GB',{month:'long'});
-  document.getElementById('todayYear').textContent = y;
 
   const days = getDays(y,m), off = getOffset(y,m), numWeeks = getWeeks(y,m);
   const today = new Date();
