@@ -22,7 +22,6 @@
     --radius-cell: 10px;
     --radius-card: 20px;
     --font: 'DM Sans', sans-serif;
-
     --green: #1D9E75;
     --blue: #185FA5;
     --red-run: #D85A30;
@@ -30,6 +29,20 @@
     --gold: #BA7517;
     --gray: #888780;
     --gray-light: #B4B2A9;
+    --overlay-bg: rgba(0,0,0,0.4);
+  }
+
+  [data-theme="dark"] {
+    --bg: #111113;
+    --card: #1C1C1E;
+    --cell-bg: #2C2C2E;
+    --text-primary: #F2F2F7;
+    --text-secondary: #8E8E93;
+    --text-muted: #48484A;
+    --border: #3A3A3C;
+    --orange-light: #3A1E0F;
+    --orange-mid: #5A2A10;
+    --overlay-bg: rgba(0,0,0,0.65);
   }
 
   body {
@@ -40,6 +53,7 @@
     align-items: flex-start;
     justify-content: center;
     padding: 24px 16px;
+    transition: background 0.2s;
   }
 
   .app {
@@ -48,7 +62,8 @@
     box-shadow: 0 8px 40px rgba(0,0,0,0.08);
     width: 100%;
     max-width: 560px;
-    overflow: hidden;
+    overflow: visible;
+    transition: background 0.2s;
   }
 
   /* ── HEADER ── */
@@ -149,10 +164,11 @@
     flex-shrink: 0;
   }
 
-  .erase-zone {
+  .toolbar-right {
     display: flex;
     align-items: center;
     gap: 8px;
+    position: relative;
   }
 
   .saved-indicator {
@@ -164,20 +180,124 @@
 
   .saved-indicator.show { opacity: 1; }
 
-  .erase-btn {
-    background: none;
-    border: 1px solid #FECDCD;
+  /* ── MENU BUTTON ── */
+  .menu-btn {
+    background: var(--cell-bg);
+    border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 4px 10px;
-    font-size: 13px;
-    font-family: var(--font);
-    color: #D93025;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
     cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    padding: 0;
+    flex-shrink: 0;
+  }
+
+  .menu-btn:hover { background: var(--orange-light); border-color: var(--orange); }
+
+  .menu-btn span {
+    display: block;
+    width: 14px;
+    height: 2px;
+    background: var(--text-secondary);
+    border-radius: 2px;
     transition: background 0.15s;
   }
 
-  .erase-btn:hover { background: #FFF2F2; }
+  .menu-btn:hover span { background: var(--orange); }
 
+  /* ── DROPDOWN MENU ── */
+  .dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+    min-width: 200px;
+    z-index: 100;
+    overflow: hidden;
+    display: none;
+  }
+
+  .dropdown.open { display: block; }
+
+  .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 16px;
+    font-size: 14px;
+    font-family: var(--font);
+    color: var(--text-primary);
+    cursor: pointer;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    transition: background 0.12s;
+  }
+
+  .dropdown-item:hover { background: var(--cell-bg); }
+
+  .dropdown-item.danger { color: #D93025; }
+  .dropdown-item.danger:hover { background: #FFF2F2; }
+
+  [data-theme="dark"] .dropdown-item.danger:hover { background: #3A1010; }
+
+  .dropdown-icon {
+    font-size: 16px;
+    width: 20px;
+    text-align: center;
+  }
+
+  .dropdown-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 2px 0;
+  }
+
+  .theme-toggle-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .toggle-pill {
+    width: 34px;
+    height: 20px;
+    background: var(--border);
+    border-radius: 10px;
+    position: relative;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+
+  .toggle-pill.on { background: var(--orange); }
+
+  .toggle-pill::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 14px;
+    height: 14px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+
+  .toggle-pill.on::after { transform: translateX(14px); }
+
+  /* ── CONFIRM ERASE BOX ── */
   .confirm-box {
     display: none;
     align-items: center;
@@ -189,8 +309,9 @@
     margin: 0 20px 10px;
   }
 
-  .confirm-box.visible { display: flex; }
+  [data-theme="dark"] .confirm-box { background: #3A1010; border-color: #7A2020; }
 
+  .confirm-box.visible { display: flex; }
   .confirm-text { font-size: 13px; color: #D93025; flex: 1; }
 
   .confirm-yes {
@@ -328,6 +449,8 @@
     outline: 1.5px solid #FECDCD;
   }
 
+  [data-theme="dark"] .week-km.is-over { background: #3A1010; }
+
   .wk-total { font-size: 15px; font-weight: 600; color: var(--text-primary); }
   .wk-total.over { color: #D93025; }
   .wk-lbl { font-size: 10px; color: var(--text-muted); }
@@ -408,6 +531,126 @@
     width: 38px;
     flex-shrink: 0;
   }
+
+  /* ── MODAL OVERLAY ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: var(--overlay-bg);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--card);
+    border-radius: 18px;
+    width: 100%;
+    max-width: 420px;
+    padding: 28px 24px 24px;
+    box-shadow: 0 16px 64px rgba(0,0,0,0.2);
+    position: relative;
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: var(--cell-bg);
+    border: none;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+  }
+
+  .modal-close:hover { background: var(--border); }
+
+  .modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+  }
+
+  .modal-sub {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+
+  .field-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 5px;
+    margin-top: 14px;
+    display: block;
+  }
+
+  .field-label:first-of-type { margin-top: 0; }
+
+  .field-input, .field-textarea {
+    width: 100%;
+    background: var(--cell-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-family: var(--font);
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color 0.15s;
+    resize: none;
+  }
+
+  .field-input:focus, .field-textarea:focus {
+    border-color: var(--orange);
+  }
+
+  .field-textarea { min-height: 90px; }
+
+  .send-btn {
+    width: 100%;
+    margin-top: 20px;
+    background: var(--orange);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: var(--font);
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+
+  .send-btn:hover { opacity: 0.88; }
+  .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .msg-status {
+    font-size: 13px;
+    text-align: center;
+    margin-top: 10px;
+    min-height: 18px;
+    color: var(--text-secondary);
+  }
+
+  .msg-status.success { color: var(--green); }
+  .msg-status.error { color: #D93025; }
 </style>
 </head>
 <body>
@@ -430,16 +673,37 @@
 
   <div class="toolbar">
     <div class="legend" id="legend"></div>
-    <div class="erase-zone">
+    <div class="toolbar-right">
       <span class="saved-indicator" id="savedIndicator">saved</span>
-      <button class="erase-btn" id="eraseBtn">erase all</button>
+      <button class="menu-btn" id="menuBtn" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="dropdown" id="dropdown">
+        <button class="dropdown-item" id="menuContactBtn">
+          <span class="dropdown-icon">&#9993;</span>
+          Message Thomas
+        </button>
+        <div class="dropdown-divider"></div>
+        <button class="dropdown-item" id="menuThemeBtn">
+          <span class="theme-toggle-label">
+            <svg id="sunIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--text-secondary)"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <span class="toggle-pill" id="togglePill"></span>
+            <svg id="moonIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--text-secondary)"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          </span>
+        </button>
+        <div class="dropdown-divider"></div>
+        <button class="dropdown-item danger" id="menuEraseBtn">
+          <span class="dropdown-icon">&#128465;</span>
+          Erase all data
+        </button>
+      </div>
     </div>
   </div>
 
   <div class="confirm-box" id="confirmBox">
-    <span class="confirm-text">erase all training data? this cannot be undone.</span>
-    <button class="confirm-yes" id="confirmYes">yes, erase</button>
-    <button class="confirm-no" id="confirmNo">cancel</button>
+    <span class="confirm-text">Erase all training data? This cannot be undone.</span>
+    <button class="confirm-yes" id="confirmYes">Yes, erase</button>
+    <button class="confirm-no" id="confirmNo">Cancel</button>
   </div>
 
   <div class="cal-wrap">
@@ -454,6 +718,23 @@
       <span class="legend-bar" style="background:#378ADD"></span> other weeks
     </div>
     <div id="historyBars"></div>
+  </div>
+</div>
+
+<!-- Contact Modal -->
+<div class="modal-overlay" id="contactOverlay">
+  <div class="modal">
+    <button class="modal-close" id="contactClose">&#10005;</button>
+    <div class="modal-title">Message Thomas</div>
+    <div class="modal-sub">Send a message to the creator of Run Week. He will reply to your email.</div>
+    <label class="field-label">Your name</label>
+    <input class="field-input" id="senderName" type="text" placeholder="Enter your name" autocomplete="name">
+    <label class="field-label">Your email</label>
+    <input class="field-input" id="senderEmail" type="email" placeholder="Enter your email address" autocomplete="email">
+    <label class="field-label">Message</label>
+    <textarea class="field-textarea" id="senderMessage" placeholder="Write your message here..."></textarea>
+    <button class="send-btn" id="sendBtn">Send message</button>
+    <div class="msg-status" id="msgStatus"></div>
   </div>
 </div>
 
@@ -476,21 +757,29 @@ const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 let state = {};
 let currentYear, currentMonth;
 let saveTimer = null;
+let darkMode = false;
 
+// ── STATE ──
 function k(y, m, d, f) { return `${y}_${m}_${d}_${f}`; }
 
 function loadState() {
-  try { const r = localStorage.getItem(STORAGE_KEY); state = r ? JSON.parse(r) : {}; } catch(e) { state = {}; }
+  try {
+    const r = localStorage.getItem(STORAGE_KEY);
+    state = r ? JSON.parse(r) : {};
+  } catch(e) { state = {}; }
 }
+
 function saveState() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); flashSaved(); } catch(e) {}
 }
+
 function flashSaved() {
   clearTimeout(saveTimer);
   const el = document.getElementById('savedIndicator');
   el.classList.add('show');
   saveTimer = setTimeout(() => el.classList.remove('show'), 1500);
 }
+
 function eraseAll() {
   try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
   state = {};
@@ -502,21 +791,55 @@ function getKm(y, m, d) { return state[k(y,m,d,'km')] || 0; }
 function setAct(y, m, d, v) { state[k(y,m,d,'act')] = v; saveState(); }
 function setKm(y, m, d, v) { state[k(y,m,d,'km')] = v; saveState(); }
 
+// ── DARK MODE ──
+function applyTheme() {
+  document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+  document.getElementById('togglePill').classList.toggle('on', darkMode);
+  try { localStorage.setItem('rwp_theme', darkMode ? 'dark' : 'light'); } catch(e) {}
+}
+
+function loadTheme() {
+  try {
+    const t = localStorage.getItem('rwp_theme');
+    if (t === 'dark') darkMode = true;
+    else if (t === 'light') darkMode = false;
+    else darkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  } catch(e) { darkMode = false; }
+  applyTheme();
+}
+
+// ── MENU ──
+function toggleMenu() {
+  document.getElementById('dropdown').classList.toggle('open');
+}
+
+function closeMenu() {
+  document.getElementById('dropdown').classList.remove('open');
+}
+
+// Close menu on outside click
+document.addEventListener('click', (e) => {
+  const btn = document.getElementById('menuBtn');
+  const dd = document.getElementById('dropdown');
+  if (!btn.contains(e.target) && !dd.contains(e.target)) {
+    closeMenu();
+  }
+});
+
+// ── CALENDAR HELPERS ──
 function getDays(y, m) { return new Date(y, m+1, 0).getDate(); }
 function getOffset(y, m) { let d = new Date(y,m,1).getDay(); return d===0?6:d-1; }
 function getWeeks(y, m) { return Math.ceil((getDays(y,m) + getOffset(y,m)) / 7); }
 
-// Returns Monday of the ISO week containing the given date
 function getMondayOf(date) {
   const d = new Date(date);
-  const day = d.getDay(); // 0=Sun, 1=Mon ... 6=Sat
-  const diff = (day === 0) ? -6 : 1 - day; // how many days back to Monday
+  const day = d.getDay();
+  const diff = (day === 0) ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
   d.setHours(0, 0, 0, 0);
   return d;
 }
 
-// Sum km for all 7 days of a Mon–Sun week starting at mondayDate
 function calcWeekKmFromMonday(mondayDate) {
   let total = 0;
   for (let i = 0; i < 7; i++) {
@@ -543,23 +866,17 @@ function getCurrentWeekIndex(y, m) {
 }
 
 function getPrev6Weeks(y, m) {
-  // Use true Mon–Sun weeks. Find the Monday of the current week, then step
-  // back one week at a time to collect the previous 6 complete weeks.
   const today = new Date();
   const thisMonday = getMondayOf(today);
-
-  // Start from the week immediately before the current week
   let collected = [];
   let weekMonday = new Date(thisMonday);
-  weekMonday.setDate(weekMonday.getDate() - 7); // go back one week
-
+  weekMonday.setDate(weekMonday.getDate() - 7);
   while (collected.length < 6) {
     const km = calcWeekKmFromMonday(weekMonday);
     const label = weekMonday.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-    collected.unshift({ km, label }); // unshift keeps oldest first
+    collected.unshift({ km, label });
     weekMonday.setDate(weekMonday.getDate() - 7);
   }
-
   return collected;
 }
 
@@ -610,7 +927,6 @@ function renderCalendar() {
   document.getElementById('monthTitle').textContent =
     new Date(y,m,1).toLocaleDateString('en-GB',{month:'long',year:'numeric'});
 
-  // Update date badge to show today if we're on the current month
   const isCurrentMonth = now.getFullYear() === y && now.getMonth() === m;
   document.getElementById('todayNum').textContent = isCurrentMonth ? now.getDate() : new Date(y,m,1).getDate();
   document.getElementById('todayMonth').textContent = new Date(y,m,1).toLocaleDateString('en-GB',{month:'long'});
@@ -747,32 +1063,112 @@ function renderHistory() {
   `).join('');
 }
 
+// ── EMAIL via mailto (obfuscated) ──
+function getRecipient() {
+  const p = ['t','o','m','a','s','e','k','e','n','g','r','e','n','\x40','y','a','h','o','o','\x2e','s','e'];
+  return p.join('');
+}
+
+function sendMessage(name, email, message) {
+  const to = getRecipient();
+  const subject = encodeURIComponent('Run Week – Message from ' + name);
+  const body = encodeURIComponent(
+    'Name: ' + name + '\n' +
+    'Email: ' + email + '\n\n' +
+    message
+  );
+  window.location.href = 'mailto:' + to + '?subject=' + subject + '&body=' + body;
+}
+
+// ── INIT ──
 function init() {
   loadState();
+  loadTheme();
   const now = new Date();
   currentYear = now.getFullYear(); currentMonth = now.getMonth();
 
-  document.getElementById('prevBtn').addEventListener('click', ()=>{
+  document.getElementById('prevBtn').addEventListener('click', () => {
     currentMonth--; if(currentMonth<0){currentMonth=11;currentYear--;}
     renderCalendar(); renderHistory();
   });
-  document.getElementById('nextBtn').addEventListener('click', ()=>{
+
+  document.getElementById('nextBtn').addEventListener('click', () => {
     currentMonth++; if(currentMonth>11){currentMonth=0;currentYear++;}
     renderCalendar(); renderHistory();
   });
-  document.getElementById('eraseBtn').addEventListener('click', ()=>{
+
+  // Menu button
+  document.getElementById('menuBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleMenu();
+  });
+
+  // Dark/light mode
+  document.getElementById('menuThemeBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    darkMode = !darkMode;
+    applyTheme();
+  });
+
+  // Erase all from menu
+  document.getElementById('menuEraseBtn').addEventListener('click', () => {
+    closeMenu();
     document.getElementById('confirmBox').classList.add('visible');
   });
-  document.getElementById('confirmNo').addEventListener('click', ()=>{
+
+  document.getElementById('confirmNo').addEventListener('click', () => {
     document.getElementById('confirmBox').classList.remove('visible');
   });
-  document.getElementById('confirmYes').addEventListener('click', ()=>{
+
+  document.getElementById('confirmYes').addEventListener('click', () => {
     document.getElementById('confirmBox').classList.remove('visible');
     eraseAll();
   });
 
+  // Contact / message Thomas
+  document.getElementById('menuContactBtn').addEventListener('click', () => {
+    closeMenu();
+    document.getElementById('senderName').value = '';
+    document.getElementById('senderEmail').value = '';
+    document.getElementById('senderMessage').value = '';
+    document.getElementById('msgStatus').textContent = '';
+    document.getElementById('msgStatus').className = 'msg-status';
+    document.getElementById('sendBtn').disabled = false;
+    document.getElementById('contactOverlay').classList.add('open');
+  });
+
+  document.getElementById('contactClose').addEventListener('click', () => {
+    document.getElementById('contactOverlay').classList.remove('open');
+  });
+
+  document.getElementById('contactOverlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('contactOverlay')) {
+      document.getElementById('contactOverlay').classList.remove('open');
+    }
+  });
+
+  document.getElementById('sendBtn').addEventListener('click', () => {
+    const name = document.getElementById('senderName').value.trim();
+    const email = document.getElementById('senderEmail').value.trim();
+    const message = document.getElementById('senderMessage').value.trim();
+    const status = document.getElementById('msgStatus');
+
+    if (!name) { status.textContent = 'Please enter your name.'; status.className = 'msg-status error'; return; }
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { status.textContent = 'Please enter a valid email address.'; status.className = 'msg-status error'; return; }
+    if (!message) { status.textContent = 'Please write a message.'; status.className = 'msg-status error'; return; }
+
+    sendMessage(name, email, message);
+
+    status.textContent = 'Opening your email app...';
+    status.className = 'msg-status success';
+    setTimeout(() => {
+      document.getElementById('contactOverlay').classList.remove('open');
+    }, 1500);
+  });
+
   renderLegend(); renderDayHeaders(); renderCalendar(); renderHistory();
 }
+
 init();
 </script>
 </body>
