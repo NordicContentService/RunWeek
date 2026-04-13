@@ -506,6 +506,27 @@ function getDays(y, m) { return new Date(y, m+1, 0).getDate(); }
 function getOffset(y, m) { let d = new Date(y,m,1).getDay(); return d===0?6:d-1; }
 function getWeeks(y, m) { return Math.ceil((getDays(y,m) + getOffset(y,m)) / 7); }
 
+// Returns Monday of the ISO week containing the given date
+function getMondayOf(date) {
+  const d = new Date(date);
+  const day = d.getDay(); // 0=Sun, 1=Mon ... 6=Sat
+  const diff = (day === 0) ? -6 : 1 - day; // how many days back to Monday
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+// Sum km for all 7 days of a Mon–Sun week starting at mondayDate
+function calcWeekKmFromMonday(mondayDate) {
+  let total = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(mondayDate);
+    d.setDate(d.getDate() + i);
+    total += getKm(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+  return total;
+}
+
 function calcWeekKm(y, m, w) {
   const days = getDays(y,m), off = getOffset(y,m);
   let t = 0;
@@ -522,40 +543,24 @@ function getCurrentWeekIndex(y, m) {
 }
 
 function getPrev6Weeks(y, m) {
-  // Collect weeks newest-first, then reverse at the end for oldest-to-newest display.
+  // Use true Mon–Sun weeks. Find the Monday of the current week, then step
+  // back one week at a time to collect the previous 6 complete weeks.
+  const today = new Date();
+  const thisMonday = getMondayOf(today);
+
+  // Start from the week immediately before the current week
   let collected = [];
+  let weekMonday = new Date(thisMonday);
+  weekMonday.setDate(weekMonday.getDate() - 7); // go back one week
 
-  const curWeekIdx = getCurrentWeekIndex(y, m);
-
-  // Add weeks in the current month that come before the current week (newest first)
-  if (curWeekIdx > 0) {
-    for (let w = curWeekIdx - 1; w >= 0; w--) {
-      const km = calcWeekKm(y, m, w);
-      const off = getOffset(y, m);
-      const startDay = Math.max(1, w * 7 - off + 1);
-      const d = new Date(y, m, startDay);
-      collected.push({ km, label: d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) });
-      if (collected.length >= 6) break;
-    }
-  }
-
-  // Go back through previous months if we still need more
-  let sy = y, sm = m;
   while (collected.length < 6) {
-    sm--; if (sm < 0) { sm = 11; sy--; }
-    const wc = getWeeks(sy, sm);
-    for (let w = wc - 1; w >= 0; w--) {
-      const km = calcWeekKm(sy, sm, w);
-      const off = getOffset(sy, sm);
-      const startDay = Math.max(1, w * 7 - off + 1);
-      const d = new Date(sy, sm, startDay);
-      collected.push({ km, label: d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) });
-      if (collected.length >= 6) break;
-    }
+    const km = calcWeekKmFromMonday(weekMonday);
+    const label = weekMonday.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    collected.unshift({ km, label }); // unshift keeps oldest first
+    weekMonday.setDate(weekMonday.getDate() - 7);
   }
 
-  // Reverse so oldest is at top, most recent at bottom
-  return collected.slice(0, 6).reverse();
+  return collected;
 }
 
 function calcAvg6Top3(y, m) {
