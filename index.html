@@ -37,8 +37,8 @@
     --card: #1C1C1E;
     --cell-bg: #2C2C2E;
     --text-primary: #F2F2F7;
-    --text-secondary: #8E8E93;
-    --text-muted: #48484A;
+    --text-secondary: #AEAEB2;
+    --text-muted: #6E6E73;
     --border: #3A3A3C;
     --orange-light: #3A1E0F;
     --orange-mid: #5A2A10;
@@ -123,7 +123,7 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    font-size: 12px;
+    font-size: 13px;
     color: var(--text-secondary);
   }
 
@@ -340,12 +340,12 @@
   .day-header-row {
     display: grid;
     grid-template-columns: repeat(7, 1fr) 46px;
-    gap: 3px;
-    margin-bottom: 3px;
+    gap: 4px;
+    margin-bottom: 4px;
   }
 
   .day-hdr {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--orange);
     text-align: center;
@@ -358,8 +358,8 @@
   .week-row {
     display: grid;
     grid-template-columns: repeat(7, 1fr) 46px;
-    gap: 3px;
-    margin-bottom: 3px;
+    gap: 4px;
+    margin-bottom: 4px;
     align-items: stretch;
   }
 
@@ -368,9 +368,10 @@
     border-radius: var(--radius-cell);
     padding: 5px 4px 4px;
     min-width: 0;
-    overflow: hidden;
+    overflow: visible;
     border: 1.5px solid transparent;
     transition: border-color 0.15s;
+    position: relative;
   }
 
   .day-cell.empty-cell {
@@ -379,11 +380,33 @@
   }
 
   .day-cell.has-activity {
-    border-top-width: 3px;
+    border: none !important;
+    position: relative;
+    z-index: 0;
+  }
+
+  .day-cell.has-activity:not(.has-two-activities)::before {
+    content: '';
+    position: absolute;
+    inset: -1.5px;
+    border-radius: calc(var(--radius-cell) + 1.5px);
+    background: var(--activity-color, #ccc);
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  .day-cell.has-activity:not(.has-two-activities)::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-cell);
+    background: var(--cell-bg);
+    z-index: -1;
+    pointer-events: none;
   }
 
   .day-num {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 500;
     color: var(--text-secondary);
     margin-bottom: 3px;
@@ -448,13 +471,13 @@
 
   [data-theme="dark"] .week-km.is-over { background: #3A1010; }
 
-  .wk-total { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+  .wk-total { font-size: 22px; font-weight: 700; color: var(--text-primary); line-height: 1; }
   .wk-total.over { color: #D93025; }
   .wk-lbl { font-size: 10px; color: var(--text-muted); }
-  .wk-avg { font-size: 11px; font-weight: 600; margin-top: 2px; text-align: center; line-height: 1.2; }
+  .wk-avg { font-size: 16px; font-weight: 700; margin-top: 2px; text-align: center; line-height: 1.1; }
   .wk-avg.normal { color: var(--orange); }
   .wk-avg.over { color: #D93025; }
-  .wk-avg-lbl { font-size: 9px; color: var(--text-muted); text-align: center; }
+  .wk-avg-lbl { font-size: 11px; font-weight: 500; color: var(--text-muted); text-align: center; }
 
   /* ── SUMMARY ── */
   .summary-section {
@@ -465,7 +488,7 @@
   }
 
   .summary-title {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
     color: var(--text-secondary);
     margin-bottom: 8px;
@@ -474,7 +497,7 @@
   }
 
   .history-meta {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--text-muted);
     margin-bottom: 10px;
     display: flex;
@@ -497,7 +520,7 @@
   }
 
   .bar-label {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--text-secondary);
     width: 46px;
     text-align: right;
@@ -522,7 +545,7 @@
   .bar-fill.top3 { background: var(--green); }
 
   .bar-km {
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 500;
     color: var(--text-secondary);
     width: 38px;
@@ -648,6 +671,210 @@
 
   .msg-status.success { color: var(--green); }
   .msg-status.error { color: #D93025; }
+
+  /* ── CLICKABLE DAY CELLS ── */
+  .clickable-day {
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+    min-height: 62px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .clickable-day:hover {
+    background: var(--orange-light);
+  }
+
+  .clickable-day:active {
+    transform: scale(0.97);
+  }
+
+  .day-empty-hint {
+    font-size: 16px;
+    color: var(--text-muted);
+    margin-top: 6px;
+    line-height: 1;
+  }
+
+  .session-label {
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: center;
+    margin-top: 2px;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .session-label-2 {
+    margin-top: 1px;
+    padding-top: 2px;
+    border-top: 1px solid var(--border);
+  }
+
+  .session-km {
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.1;
+    text-align: center;
+  }
+
+  /* Split border for two sessions — full rounded outline, top half color1, bottom half color2 */
+  .has-two-activities {
+    border: none !important;
+    background-clip: padding-box;
+    position: relative;
+    z-index: 0;
+  }
+
+  .has-two-activities::before {
+    content: '';
+    position: absolute;
+    inset: -1.5px;
+    border-radius: calc(var(--radius-cell) + 1.5px);
+    background: conic-gradient(
+      from 270deg,
+      var(--color1, #ccc) 0deg,
+      var(--color1, #ccc) 180deg,
+      var(--color2, #ccc) 180deg,
+      var(--color2, #ccc) 360deg
+    );
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  .has-two-activities::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-cell);
+    background: var(--cell-bg);
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  /* ── DAY POPUP OVERLAY ── */
+  .day-popup-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: var(--overlay-bg);
+    z-index: 300;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .day-popup-overlay.open { display: flex; }
+
+  .day-popup {
+    background: var(--card);
+    border-radius: 20px;
+    width: 100%;
+    max-width: 380px;
+    padding: 24px 22px 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    position: relative;
+    animation: popupIn 0.2s cubic-bezier(0.34,1.56,0.64,1);
+  }
+
+  @keyframes popupIn {
+    from { opacity: 0; transform: scale(0.88); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  .day-popup-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 18px;
+    text-align: center;
+  }
+
+  .popup-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: var(--cell-bg);
+    border: none;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .popup-session {
+    background: var(--cell-bg);
+    border-radius: 14px;
+    padding: 14px 14px 12px;
+    margin-bottom: 10px;
+  }
+
+  .popup-session-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+
+  .popup-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .popup-field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+  }
+
+  .popup-select {
+    width: 100%;
+    font-size: 13px;
+    font-family: var(--font);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    background: var(--card);
+    color: var(--text-primary);
+    padding: 7px 8px;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    outline: none;
+  }
+
+  .popup-select:focus { border-color: var(--orange); }
+  .popup-select:disabled { opacity: 0.3; pointer-events: none; }
+
+  .popup-done-btn {
+    width: 100%;
+    margin-top: 14px;
+    background: var(--orange);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 13px;
+    font-size: 15px;
+    font-weight: 700;
+    font-family: var(--font);
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+
+  .popup-done-btn:hover { opacity: 0.88; }
 </style>
 <script>
   window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
@@ -722,6 +949,44 @@
   <div class="app-footer">© 2026 Nordic Content Service</div>
 </div>
 
+<!-- Day Edit Popup -->
+<div class="day-popup-overlay" id="dayPopupOverlay">
+  <div class="day-popup">
+    <button class="popup-close" id="popupClose">&#10005;</button>
+    <div class="day-popup-title" id="popupTitle"></div>
+
+    <div class="popup-session">
+      <div class="popup-session-title">Session 1</div>
+      <div class="popup-row">
+        <div class="popup-field">
+          <label>Run type</label>
+          <select class="popup-select" id="popup-act1"></select>
+        </div>
+        <div class="popup-field">
+          <label>Distance</label>
+          <select class="popup-select" id="popup-km1"></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="popup-session">
+      <div class="popup-session-title">Session 2 <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-muted);font-size:10px;">(optional)</span></div>
+      <div class="popup-row">
+        <div class="popup-field">
+          <label>Run type</label>
+          <select class="popup-select" id="popup-act2"></select>
+        </div>
+        <div class="popup-field">
+          <label>Distance</label>
+          <select class="popup-select" id="popup-km2"></select>
+        </div>
+      </div>
+    </div>
+
+    <button class="popup-done-btn" id="popupDoneBtn">Done</button>
+  </div>
+</div>
+
 <!-- Contact Modal -->
 <div class="modal-overlay" id="contactOverlay">
   <div class="modal">
@@ -791,6 +1056,10 @@ function getAct(y, m, d) { return state[k(y,m,d,'act')] || ''; }
 function getKm(y, m, d) { return state[k(y,m,d,'km')] || 0; }
 function setAct(y, m, d, v) { state[k(y,m,d,'act')] = v; saveState(); }
 function setKm(y, m, d, v) { state[k(y,m,d,'km')] = v; saveState(); }
+function getAct2(y, m, d) { return state[k(y,m,d,'act2')] || ''; }
+function getKm2(y, m, d) { return state[k(y,m,d,'km2')] || 0; }
+function setAct2(y, m, d, v) { state[k(y,m,d,'act2')] = v; saveState(); }
+function setKm2(y, m, d, v) { state[k(y,m,d,'km2')] = v; saveState(); }
 
 // ── DARK MODE ──
 function applyTheme() {
@@ -847,6 +1116,7 @@ function calcWeekKmFromMonday(mondayDate) {
     const d = new Date(mondayDate);
     d.setDate(d.getDate() + i);
     total += getKm(d.getFullYear(), d.getMonth(), d.getDate());
+    total += getKm2(d.getFullYear(), d.getMonth(), d.getDate());
   }
   return total;
 }
@@ -855,7 +1125,10 @@ function calcWeekKm(y, m, w) {
   const days = getDays(y,m), off = getOffset(y,m);
   let t = 0;
   for (let d=1; d<=days; d++) {
-    if (Math.floor((d-1+off)/7) === w) t += getKm(y,m,d);
+    if (Math.floor((d-1+off)/7) === w) {
+      t += getKm(y,m,d);
+      t += getKm2(y,m,d);
+    }
   }
   return t;
 }
@@ -910,6 +1183,79 @@ function makeKmSelect(y, m, d, disabled, currentKm, rowRef, weekIdx, avg6) {
   return sel;
 }
 
+// ── DAY POPUP ──
+let popupY, popupM, popupD;
+
+function openDayPopup(y, m, d) {
+  popupY = y; popupM = m; popupD = d;
+  const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const dateObj = new Date(y, m, d);
+  const title = dayNames[dateObj.getDay()] + ' ' + d + ' ' + monthNames[m];
+  document.getElementById('popupTitle').textContent = title;
+
+  const act1 = getAct(y, m, d), km1 = getKm(y, m, d);
+  const act2 = getAct2(y, m, d), km2 = getKm2(y, m, d);
+
+  populatePopupSelect('popup-act1', act1);
+  populatePopupSelect('popup-act2', act2);
+  populatePopupKm('popup-km1', km1);
+  populatePopupKm('popup-km2', km2);
+
+  const info1 = ACT_MAP[act1] || ACT_MAP[''];
+  document.getElementById('popup-km1').disabled = !info1.hasKm;
+  const info2 = ACT_MAP[act2] || ACT_MAP[''];
+  document.getElementById('popup-km2').disabled = !info2.hasKm;
+
+  document.getElementById('dayPopupOverlay').classList.add('open');
+}
+
+function populatePopupSelect(id, current) {
+  const sel = document.getElementById(id);
+  sel.innerHTML = '';
+  ACTIVITIES.forEach(a => {
+    const opt = document.createElement('option');
+    opt.value = a.value; opt.textContent = a.label;
+    if (a.value === current) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function populatePopupKm(id, current) {
+  const sel = document.getElementById(id);
+  sel.innerHTML = '';
+  KM_OPTIONS.forEach((v, i) => {
+    const opt = document.createElement('option');
+    opt.value = i === 0 ? 0 : v;
+    opt.textContent = i === 0 ? '—' : String(v);
+    if ((i === 0 && current === 0) || (i > 0 && v === current)) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function closeDayPopup() {
+  document.getElementById('dayPopupOverlay').classList.remove('open');
+}
+
+function saveDayPopup() {
+  const act1 = document.getElementById('popup-act1').value;
+  const km1 = parseInt(document.getElementById('popup-km1').value) || 0;
+  const act2 = document.getElementById('popup-act2').value;
+  const km2 = parseInt(document.getElementById('popup-km2').value) || 0;
+
+  const info1 = ACT_MAP[act1] || ACT_MAP[''];
+  const info2 = ACT_MAP[act2] || ACT_MAP[''];
+
+  setAct(popupY, popupM, popupD, act1);
+  setKm(popupY, popupM, popupD, info1.hasKm ? km1 : 0);
+  setAct2(popupY, popupM, popupD, act2);
+  setKm2(popupY, popupM, popupD, info2.hasKm ? km2 : 0);
+
+  closeDayPopup();
+  renderCalendar();
+  renderHistory();
+}
+
 function renderLegend() {
   document.getElementById('legend').innerHTML = ACTIVITIES.filter(a=>a.value).map(a=>
     `<span class="legend-item"><span class="dot" style="background:${a.color}"></span>${a.label}</span>`
@@ -927,8 +1273,6 @@ function renderCalendar() {
   const now = new Date();
   document.getElementById('monthTitle').textContent =
     new Date(y,m,1).toLocaleDateString('en-GB',{month:'long',year:'numeric'});
-
-  const isCurrentMonth = now.getFullYear() === y && now.getMonth() === m;
 
   const days = getDays(y,m), off = getOffset(y,m), numWeeks = getWeeks(y,m);
   const today = new Date();
@@ -952,13 +1296,22 @@ function renderCalendar() {
       if (dayNum < 1 || dayNum > days) {
         cell.className = 'day-cell empty-cell';
       } else {
-        cell.className = 'day-cell';
-        const act = getAct(y,m,dayNum);
-        const km = getKm(y,m,dayNum);
-        const actInfo = ACT_MAP[act] || ACT_MAP[''];
-        if (act) {
+        cell.className = 'day-cell clickable-day';
+        const act1 = getAct(y,m,dayNum);
+        const act2 = getAct2(y,m,dayNum);
+        const km1 = getKm(y,m,dayNum);
+        const km2 = getKm2(y,m,dayNum);
+        const info1 = ACT_MAP[act1] || ACT_MAP[''];
+        const info2 = ACT_MAP[act2] || ACT_MAP[''];
+
+        // Border coloring: split if two sessions
+        if (act1 && act2) {
+          cell.classList.add('has-activity', 'has-two-activities');
+          cell.style.setProperty('--color1', info1.color);
+          cell.style.setProperty('--color2', info2.color);
+        } else if (act1) {
           cell.classList.add('has-activity');
-          cell.style.borderColor = actInfo.color;
+          cell.style.setProperty('--activity-color', info1.color);
         }
 
         const isTodayCell = today.getFullYear()===y && today.getMonth()===m && today.getDate()===dayNum;
@@ -967,36 +1320,45 @@ function renderCalendar() {
         numEl.textContent = dayNum;
         cell.appendChild(numEl);
 
-        const actSel = document.createElement('select');
-        actSel.className = 'sel';
-        ACTIVITIES.forEach(a => {
-          const opt = document.createElement('option');
-          opt.value = a.value; opt.textContent = a.label;
-          if (a.value === act) opt.selected = true;
-          actSel.appendChild(opt);
-        });
-
-        const kmSel = makeKmSelect(y, m, dayNum, !actInfo.hasKm, km, row, w, avg6);
-
-        actSel.addEventListener('change', function() {
-          const newAct = this.value;
-          setAct(y, m, dayNum, newAct);
-          const info = ACT_MAP[newAct] || ACT_MAP[''];
-          if (newAct) {
-            cell.classList.add('has-activity');
-            cell.style.borderColor = info.color;
-          } else {
-            cell.classList.remove('has-activity');
-            cell.style.borderColor = 'transparent';
+        // Session labels
+        if (act1) {
+          const s1 = document.createElement('div');
+          s1.className = 'session-label';
+          s1.style.color = info1.color;
+          s1.textContent = info1.label.replace(' Run','').replace('Short Int.','S.Int').replace('Long Int.','L.Int');
+          cell.appendChild(s1);
+          if (km1 > 0) {
+            const k1 = document.createElement('div');
+            k1.className = 'session-km';
+            k1.style.color = info1.color;
+            k1.textContent = km1;
+            cell.appendChild(k1);
           }
-          kmSel.disabled = !info.hasKm;
-          if (!info.hasKm) { setKm(y,m,dayNum,0); kmSel.value = 0; }
-          updateWeekKm(w, row, avg6);
-          renderHistory();
-        });
+        }
+        if (act2) {
+          const s2 = document.createElement('div');
+          s2.className = 'session-label session-label-2';
+          s2.style.color = info2.color;
+          s2.textContent = info2.label.replace(' Run','').replace('Short Int.','S.Int').replace('Long Int.','L.Int');
+          cell.appendChild(s2);
+          if (km2 > 0) {
+            const k2 = document.createElement('div');
+            k2.className = 'session-km';
+            k2.style.color = info2.color;
+            k2.textContent = km2;
+            cell.appendChild(k2);
+          }
+        }
 
-        cell.appendChild(actSel);
-        cell.appendChild(kmSel);
+        if (!act1 && !act2) {
+          const empty = document.createElement('div');
+          empty.className = 'day-empty-hint';
+          empty.textContent = '+';
+          cell.appendChild(empty);
+        }
+
+        const dayNumCopy = dayNum;
+        cell.addEventListener('click', () => openDayPopup(y, m, dayNumCopy));
       }
       row.appendChild(cell);
     }
@@ -1165,6 +1527,25 @@ function init() {
   });
 
   renderLegend(); renderDayHeaders(); renderCalendar(); renderHistory();
+
+  // Day popup
+  document.getElementById('popupClose').addEventListener('click', closeDayPopup);
+  document.getElementById('popupDoneBtn').addEventListener('click', saveDayPopup);
+  document.getElementById('dayPopupOverlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('dayPopupOverlay')) closeDayPopup();
+  });
+
+  // Popup act selects update km disabled state
+  document.getElementById('popup-act1').addEventListener('change', function() {
+    const info = ACT_MAP[this.value] || ACT_MAP[''];
+    document.getElementById('popup-km1').disabled = !info.hasKm;
+    if (!info.hasKm) document.getElementById('popup-km1').value = 0;
+  });
+  document.getElementById('popup-act2').addEventListener('change', function() {
+    const info = ACT_MAP[this.value] || ACT_MAP[''];
+    document.getElementById('popup-km2').disabled = !info.hasKm;
+    if (!info.hasKm) document.getElementById('popup-km2').value = 0;
+  });
 }
 
 init();
