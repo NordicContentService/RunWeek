@@ -1,0 +1,20 @@
+{
+  "name": "run-week",
+  "version": "1.0.0",
+  "description": "Run Week Planner - A simple weekly running distance planner",
+  "main": "index.html",
+  "scripts": {
+    "dev": "npx serve .",
+    "lint": "echo 'No linter configured for static HTML project'"
+  },
+  "keywords": [
+    "running",
+    "planner",
+    "fitness"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@vercel/analytics": "^1.4.1"
+  }
+}
