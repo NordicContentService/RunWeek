@@ -1,0 +1,21 @@
+{
+  "name": "run-week",
+  "version": "1.0.0",
+  "description": "Run Week Planner",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild app.js --bundle --outfile=dist/app.js --format=esm",
+    "dev": "npm run build && npx http-server -p 3000",
+    "lint": "echo 'No linting configured'",
+    "test": "echo 'No tests configured'"
+  },
+  "keywords": ["running", "planner"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@vercel/analytics": "^1.1.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.19.0"
+  }
+}
