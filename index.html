@@ -1547,11 +1547,11 @@ function openDayPopup(y, m, d) {
     const stats = [];
     if (risk1) {
       lines.push((km2 > 0 ? 'Session 1: ' : '') + risk1.msg);
-      stats.push((km2 > 0 ? 'S1 ' : '') + 'This run: ' + risk1.km + ' km  |  Recent longest: ' + risk1.longestRecent + ' km');
+      stats.push((km2 > 0 ? 'S1 ' : '') + 'This run: ' + risk1.km + '  |  Recent longest: ' + risk1.longestRecent);
     }
     if (risk2) {
       lines.push('Session 2: ' + risk2.msg);
-      stats.push('S2 This run: ' + risk2.km + ' km  |  Recent longest: ' + risk2.longestRecent + ' km');
+      stats.push('S2 This run: ' + risk2.km + '  |  Recent longest: ' + risk2.longestRecent);
     }
     if (proxRisk) {
       lines.push('⏱ Hard session proximity: ' + proxRisk.myLabel + ' is within 48h of another hard effort. Allow more recovery.');
@@ -1702,7 +1702,7 @@ function renderCalendar() {
                 e.stopPropagation();
                 showInjuryTooltip(badge, 'Single Session Risk',
                   risk1.msg,
-                  'This run: <strong>' + risk1.km + ' km</strong> &nbsp;|&nbsp; Recent longest: <strong>' + risk1.longestRecent + ' km</strong>'
+                  'This run: <strong>' + risk1.km + '</strong> &nbsp;|&nbsp; Recent longest: <strong>' + risk1.longestRecent + '</strong>'
                 );
                 openDayPopup(y, m, dayNum);
               });
@@ -1732,7 +1732,7 @@ function renderCalendar() {
                 e.stopPropagation();
                 showInjuryTooltip(badge2, 'Single Session Risk',
                   risk2.msg,
-                  'This run: <strong>' + risk2.km + ' km</strong> &nbsp;|&nbsp; Recent longest: <strong>' + risk2.longestRecent + ' km</strong>'
+                  'This run: <strong>' + risk2.km + '</strong> &nbsp;|&nbsp; Recent longest: <strong>' + risk2.longestRecent + '</strong>'
                 );
                 openDayPopup(y, m, dayNum);
               });
@@ -1812,12 +1812,12 @@ function renderCalendar() {
             document.getElementById('weekWarningText').textContent = risk.msg;
             const statLabel = risk.stateLabel ? risk.stateLabel + '  |  ' : '';
             document.getElementById('weekWarningStat').textContent =
-              statLabel + 'This week: ' + risk.weekKm + ' km  |  Baseline (' + (risk.baselineLabel || 'recent') + '): ' + risk.avg6 + ' km';
+              statLabel + 'This week: ' + risk.weekKm + '  |  Baseline (' + (risk.baselineLabel || 'recent') + '): ' + risk.avg6;
             panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
             // also show tooltip
             showInjuryTooltip(kmCell, risk.stateLabel || 'Weekly Volume Risk',
               risk.msg,
-              'This week: <strong>' + risk.weekKm + ' km</strong> &nbsp;|&nbsp; Baseline: <strong>' + risk.avg6 + ' km</strong>'
+              'This week: <strong>' + risk.weekKm + '</strong> &nbsp;|&nbsp; Baseline: <strong>' + risk.avg6 + '</strong>'
             );
           }
         });
