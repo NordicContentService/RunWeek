@@ -985,6 +985,86 @@
   }
 
   .keypad-done-btn:hover { opacity: 0.88; }
+
+  /* ── INJURY WARNING BADGE ── */
+  .injury-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 14px;
+    height: 14px;
+    background: #D93025;
+    color: #fff;
+    border-radius: 50%;
+    font-size: 9px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    line-height: 1;
+    box-shadow: 0 1px 4px rgba(217,48,37,0.4);
+    flex-shrink: 0;
+  }
+
+  .injury-badge:hover { background: #b71c1c; }
+
+  /* ── INJURY TOOLTIP ── */
+  .injury-tooltip {
+    position: fixed;
+    background: #1A1A1A;
+    color: #fff;
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    max-width: 240px;
+    z-index: 9999;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.15s, transform 0.15s;
+  }
+
+  .injury-tooltip.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .injury-tooltip-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #FF6B6B;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .injury-tooltip p { margin: 0; color: #E0E0E0; }
+  .injury-tooltip p + p { margin-top: 4px; }
+
+  .injury-tooltip-stat {
+    margin-top: 7px;
+    padding-top: 7px;
+    border-top: 1px solid #333;
+    font-size: 11px;
+    color: #999;
+  }
+
+  .injury-tooltip-stat strong { color: #FF6B6B; }
+
+  /* week warning tooltip */
+  .week-km.is-over { cursor: pointer; }
+  .wk-warn-icon {
+    font-size: 11px;
+    margin-top: 1px;
+    color: #D93025;
+  }
 </style>
 <script>
   window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
@@ -992,6 +1072,13 @@
 <script defer src="/_vercel/insights/script.js"></script>
 </head>
 <body>
+
+<!-- Injury Risk Tooltip -->
+<div class="injury-tooltip" id="injuryTooltip">
+  <div class="injury-tooltip-title">&#9888; Injury Risk</div>
+  <p id="injuryTooltipBody"></p>
+  <div class="injury-tooltip-stat" id="injuryTooltipStat"></div>
+</div>
 
 <div class="app">
   <div class="app-header">
@@ -1047,6 +1134,16 @@
     <div id="calGrid"></div>
   </div>
 
+  <!-- Week warning inline note -->
+  <div id="weekWarningPanel" style="display:none; margin: -4px 12px 8px; background:#FFF2F2; border:1px solid #FECDCD; border-radius:12px; padding:11px 14px; font-size:12px; color:#D93025; line-height:1.5; animation: popupIn 0.18s ease;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:3px;">
+      <span style="font-weight:700; display:flex; align-items:center; gap:5px;">&#9888; Weekly Volume Risk</span>
+      <button onclick="document.getElementById('weekWarningPanel').style.display='none'" style="background:none;border:none;color:#D93025;font-size:15px;cursor:pointer;padding:0 2px;line-height:1;">&#10005;</button>
+    </div>
+    <div id="weekWarningText"></div>
+    <div id="weekWarningStat" style="margin-top:5px; padding-top:5px; border-top:1px solid #FECDCD; color:#b71c1c; font-size:11px;"></div>
+  </div>
+
   <div class="summary-section">
     <div class="summary-title">Previous 6 Weeks</div>
     <div class="history-meta">
@@ -1090,6 +1187,12 @@
           <button class="km-display-btn" id="popup-km2" type="button">—</button>
         </div>
       </div>
+    </div>
+
+    <div id="popupWarning" style="display:none; margin-top:10px; background:#FFF2F2; border:1px solid #FECDCD; border-radius:10px; padding:10px 12px; font-size:12px; color:#D93025; line-height:1.5;">
+      <div style="font-weight:700; margin-bottom:3px; display:flex; align-items:center; gap:5px;">&#9888; Injury Risk</div>
+      <div id="popupWarningText"></div>
+      <div id="popupWarningStat" style="margin-top:5px; padding-top:5px; border-top:1px solid #FECDCD; color:#b71c1c; font-size:11px;"></div>
     </div>
 
     <button class="popup-done-btn" id="popupDoneBtn">Done</button>
@@ -1346,6 +1449,30 @@ function openDayPopup(y, m, d) {
   const info2 = ACT_MAP[act2] || ACT_MAP[''];
   document.getElementById('popup-km2').disabled = !info2.hasKm;
 
+  // Injury warning inside popup
+  const warningEl = document.getElementById('popupWarning');
+  const warningText = document.getElementById('popupWarningText');
+  const warningStat = document.getElementById('popupWarningStat');
+  const risk1 = info1.hasKm && km1 > 0 ? checkSessionRisk(km1, y, m, d) : null;
+  const risk2 = info2.hasKm && km2 > 0 ? checkSessionRisk(km2, y, m, d) : null;
+  if (risk1 || risk2) {
+    warningEl.style.display = 'block';
+    const lines = [];
+    const stats = [];
+    if (risk1) {
+      lines.push((km2 > 0 ? 'Session 1: ' : '') + risk1.msg);
+      stats.push((km2 > 0 ? 'S1 ' : '') + 'This run: ' + risk1.km + ' km  |  Recent longest: ' + risk1.longestRecent + ' km');
+    }
+    if (risk2) {
+      lines.push('Session 2: ' + risk2.msg);
+      stats.push('S2 This run: ' + risk2.km + ' km  |  Recent longest: ' + risk2.longestRecent + ' km');
+    }
+    warningText.textContent = lines.join(' ');
+    warningStat.textContent = stats.join('  ·  ');
+  } else {
+    warningEl.style.display = 'none';
+  }
+
   document.getElementById('dayPopupOverlay').classList.add('open');
 }
 
@@ -1409,6 +1536,10 @@ function renderCalendar() {
   document.getElementById('monthTitle').textContent =
     new Date(y,m,1).toLocaleDateString('en-GB',{month:'long',year:'numeric'});
 
+  // Hide week warning panel on re-render
+  const wwp = document.getElementById('weekWarningPanel');
+  if (wwp) wwp.style.display = 'none';
+
   const days = getDays(y,m), off = getOffset(y,m), numWeeks = getWeeks(y,m);
   const today = new Date();
   const curWeekIdx = getCurrentWeekIndex(y, m);
@@ -1466,6 +1597,23 @@ function renderCalendar() {
             const k1 = document.createElement('div');
             k1.className = 'session-km';
             k1.style.color = info1.color;
+            // Check injury risk
+            const risk1 = checkSessionRisk(km1, y, m, dayNum);
+            if (risk1) {
+              k1.style.color = '#D93025';
+              const badge = document.createElement('span');
+              badge.className = 'injury-badge';
+              badge.textContent = '!';
+              badge.title = '';
+              badge.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showInjuryTooltip(badge, 'Single Session Risk',
+                  risk1.msg,
+                  'This run: <strong>' + risk1.km + ' km</strong> &nbsp;|&nbsp; Recent longest: <strong>' + risk1.longestRecent + ' km</strong>'
+                );
+              });
+              cell.appendChild(badge);
+            }
             k1.textContent = km1;
             cell.appendChild(k1);
           }
@@ -1479,7 +1627,24 @@ function renderCalendar() {
           if (km2 > 0) {
             const k2 = document.createElement('div');
             k2.className = 'session-km';
-            k2.style.color = info2.color;
+            // Check injury risk
+            const risk2 = checkSessionRisk(km2, y, m, dayNum);
+            if (risk2) {
+              k2.style.color = '#D93025';
+              const badge2 = document.createElement('span');
+              badge2.className = 'injury-badge';
+              badge2.textContent = '!';
+              badge2.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showInjuryTooltip(badge2, 'Single Session Risk',
+                  risk2.msg,
+                  'This run: <strong>' + risk2.km + ' km</strong> &nbsp;|&nbsp; Recent longest: <strong>' + risk2.longestRecent + ' km</strong>'
+                );
+              });
+              cell.appendChild(badge2);
+            } else {
+              k2.style.color = info2.color;
+            }
             k2.textContent = km2;
             cell.appendChild(k2);
           }
@@ -1521,6 +1686,29 @@ function renderCalendar() {
       avgLbl.textContent = 'avg 6w';
       kmCell.appendChild(avgEl);
       kmCell.appendChild(avgLbl);
+
+      if (isOver) {
+        const warnIcon = document.createElement('div');
+        warnIcon.className = 'wk-warn-icon';
+        warnIcon.textContent = '⚠';
+        kmCell.appendChild(warnIcon);
+        kmCell.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const risk = checkWeekRisk(wkm, avg6);
+          if (risk) {
+            const panel = document.getElementById('weekWarningPanel');
+            document.getElementById('weekWarningText').textContent = risk.msg;
+            document.getElementById('weekWarningStat').textContent =
+              'This week: ' + risk.weekKm + ' km  |  6-week avg: ' + risk.avg6 + ' km';
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            // also show tooltip
+            showInjuryTooltip(kmCell, 'Weekly Volume Risk',
+              risk.msg,
+              'This week: <strong>' + risk.weekKm + ' km</strong> &nbsp;|&nbsp; 6w avg: <strong>' + risk.avg6 + ' km</strong>'
+            );
+          }
+        });
+      }
     }
 
     row.appendChild(kmCell);
@@ -1756,6 +1944,123 @@ function init() {
     if (e.target === this) commitKeypad();
   });
 }
+
+// ── INJURY RISK ──
+// Get the longest single-session run in the past N days (default 30)
+function getLongestRecentRun(excludeY, excludeM, excludeD, daysBack = 30) {
+  const today = new Date(excludeY, excludeM, excludeD);
+  let longest = 0;
+  for (let i = 1; i <= daysBack; i++) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    const y = d.getFullYear(), m = d.getMonth(), day = d.getDate();
+    const km1 = getKm(y, m, day);
+    const km2 = getKm2(y, m, day);
+    if (km1 > longest) longest = km1;
+    if (km2 > longest) longest = km2;
+  }
+  return longest;
+}
+
+// Returns the weekly total for the past N weeks (for trend check)
+function getWeeklyTotals(numWeeks = 6) {
+  const today = new Date();
+  const thisMonday = getMondayOf(today);
+  const totals = [];
+  for (let i = numWeeks; i >= 1; i--) {
+    const mon = new Date(thisMonday);
+    mon.setDate(mon.getDate() - i * 7);
+    totals.push(calcWeekKmFromMonday(mon));
+  }
+  return totals;
+}
+
+// Check session risk: returns object with risk info or null
+function checkSessionRisk(km, y, m, d) {
+  if (!km || km <= 0) return null;
+  const longestRecent = getLongestRecentRun(y, m, d, 30);
+  if (longestRecent <= 0) return null;
+  const increase = (km - longestRecent) / longestRecent;
+  if (increase <= 0.10) return null;
+  const pct = Math.round(increase * 100);
+  let level, msg;
+  if (pct <= 30) {
+    level = 'moderate';
+    msg = 'This run is ' + pct + '% longer than your recent longest. Moderate injury risk — stay easy.';
+  } else if (pct <= 100) {
+    level = 'high';
+    msg = 'This run is ' + pct + '% longer than your recent longest. High injury risk — consider splitting into two sessions.';
+  } else {
+    level = 'severe';
+    msg = 'This run is ' + pct + '% longer than your recent longest. Severe spike — very high injury risk.';
+  }
+  return { pct, longestRecent, km, level, msg };
+}
+
+// Check week risk: returns object or null
+function checkWeekRisk(weekKm, avg6) {
+  if (!avg6 || avg6 <= 0 || !weekKm || weekKm <= 0) return null;
+  const increase = (weekKm - avg6) / avg6;
+  if (increase <= 0.10) return null;
+  const pct = Math.round(increase * 100);
+  let level, msg;
+  if (pct <= 30) {
+    level = 'moderate';
+    msg = 'This week is ' + pct + '% above your 6-week average. Moderate overload risk.';
+  } else if (pct <= 100) {
+    level = 'high';
+    msg = 'This week is ' + pct + '% above your 6-week average. High overload — plan a lighter week after this.';
+  } else {
+    level = 'severe';
+    msg = 'This week is ' + pct + '% above your 6-week average. Severe weekly spike — very high injury risk.';
+  }
+  return { pct, avg6, weekKm, level, msg };
+}
+
+// ── TOOLTIP ──
+const tooltip = document.getElementById('injuryTooltip');
+let tooltipHideTimer = null;
+
+function showInjuryTooltip(el, title, body, stat) {
+  clearTimeout(tooltipHideTimer);
+  document.getElementById('injuryTooltipBody').textContent = body;
+  document.getElementById('injuryTooltipStat').innerHTML = stat;
+  tooltip.querySelector('.injury-tooltip-title').innerHTML = '&#9888; ' + title;
+
+  tooltip.classList.remove('visible');
+  tooltip.style.opacity = '0';
+
+  // Position
+  const rect = el.getBoundingClientRect();
+  const tw = 240;
+  let left = rect.left + rect.width / 2 - tw / 2;
+  let top = rect.bottom + 8 + window.scrollY;
+
+  // Keep within viewport
+  if (left + tw > window.innerWidth - 8) left = window.innerWidth - tw - 8;
+  if (left < 8) left = 8;
+  // If it would go below viewport, show above
+  if (rect.bottom + 8 + 140 > window.innerHeight) {
+    top = rect.top - 8 - 140 + window.scrollY;
+  }
+
+  tooltip.style.left = left + 'px';
+  tooltip.style.top = top + 'px';
+  tooltip.style.maxWidth = tw + 'px';
+
+  requestAnimationFrame(() => tooltip.classList.add('visible'));
+}
+
+function hideInjuryTooltip(delay = 200) {
+  clearTimeout(tooltipHideTimer);
+  tooltipHideTimer = setTimeout(() => tooltip.classList.remove('visible'), delay);
+}
+
+document.addEventListener('click', (e) => {
+  if (!tooltip.contains(e.target) && !e.target.classList.contains('injury-badge') && !e.target.classList.contains('week-km')) {
+    hideInjuryTooltip(0);
+  }
+});
 
 init();
 </script>
