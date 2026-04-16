@@ -1336,6 +1336,7 @@ const ACTIVITIES = [
   { value: 'trail', label: 'Trail', color: '#7A5C2E', hasKm: true },
   { value: 'work', label: 'Drills', color: '#888780', hasKm: false },
   { value: 'gym', label: 'Gym', color: '#5B8DD9', hasKm: false },
+  { value: 'vertical', label: 'Vertical', color: '#6B8E4E', hasKm: true },
 ];
 const ACT_MAP = Object.fromEntries(ACTIVITIES.map(a => [a.value, a]));
 const KM_OPTIONS = ['—', ...Array.from({length: 50}, (_, i) => i + 1)];
@@ -1795,7 +1796,7 @@ function renderCalendar() {
       avgEl.textContent = avg6;
       const avgLbl = document.createElement('div');
       avgLbl.className = 'wk-avg-lbl';
-      avgLbl.textContent = 'Avg 3w';
+      avgLbl.textContent = 'BL';
       kmCell.appendChild(avgEl);
       kmCell.appendChild(avgLbl);
 
@@ -2279,7 +2280,7 @@ function checkWeekRisk(weekKm, _legacyBaseline) {
 }
 
 // ── PROXIMITY WARNING ──
-const HARD_SESSIONS = new Set(['tempo', 'short_int', 'long_int', 'long']);
+const HARD_SESSIONS = new Set(['tempo', 'short_int', 'long_int', 'long', 'vertical']);
 
 function dateToTimestamp(y, m, d) {
   return new Date(y, m, d).getTime();
