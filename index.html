@@ -1219,6 +1219,26 @@
     <div id="weekWarningStat" style="margin-top:5px; padding-top:5px; border-top:1px solid #FECDCD; color:#b71c1c; font-size:11px;"></div>
   </div>
 
+  <!-- Hard session count warning -->
+  <div id="hardCountWarningPanel" style="display:none; margin: -4px 12px 8px; background:#FFFBEA; border:1px solid #E6B800; border-radius:12px; padding:11px 14px; font-size:12px; color:#7A5500; line-height:1.5; animation: popupIn 0.18s ease;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:3px;">
+      <span style="font-weight:700; display:flex; align-items:center; gap:5px; color:#B38600;">&#9888; Hard Session Load</span>
+      <button onclick="document.getElementById('hardCountWarningPanel').style.display='none'" style="background:none;border:none;color:#B38600;font-size:15px;cursor:pointer;padding:0 2px;line-height:1;">&#10005;</button>
+    </div>
+    <div id="hardCountWarningText"></div>
+    <div id="hardCountWarningStat" style="margin-top:5px; padding-top:5px; border-top:1px solid #E6B800; color:#B38600; font-size:11px;"></div>
+  </div>
+
+  <!-- Hard session distance ratio warning -->
+  <div id="hardDistWarningPanel" style="display:none; margin: -4px 12px 8px; background:#FFFBEA; border:1px solid #E6B800; border-radius:12px; padding:11px 14px; font-size:12px; color:#7A5500; line-height:1.5; animation: popupIn 0.18s ease;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:3px;">
+      <span style="font-weight:700; display:flex; align-items:center; gap:5px; color:#B38600;">&#9888; Hard Session Distance Ratio</span>
+      <button onclick="document.getElementById('hardDistWarningPanel').style.display='none'" style="background:none;border:none;color:#B38600;font-size:15px;cursor:pointer;padding:0 2px;line-height:1;">&#10005;</button>
+    </div>
+    <div id="hardDistWarningText"></div>
+    <div id="hardDistWarningStat" style="margin-top:5px; padding-top:5px; border-top:1px solid #E6B800; color:#B38600; font-size:11px;"></div>
+  </div>
+
   <div class="summary-section">
     <div class="summary-title">Previous 6 Weeks</div>
     <div class="history-meta" id="historyMeta">
@@ -1630,6 +1650,29 @@ function renderCalendar() {
   // Hide week warning panel on re-render
   const wwp = document.getElementById('weekWarningPanel');
   if (wwp) wwp.style.display = 'none';
+
+  // Hard session warnings — only relevant for the current month view
+  const hardCountPanel = document.getElementById('hardCountWarningPanel');
+  const hardDistPanel = document.getElementById('hardDistWarningPanel');
+  if (hardCountPanel) hardCountPanel.style.display = 'none';
+  if (hardDistPanel) hardDistPanel.style.display = 'none';
+
+  const today2 = new Date();
+  const isCurrentMonthView = (y === today2.getFullYear() && m === today2.getMonth());
+  if (isCurrentMonthView) {
+    const countWarn = checkHardSessionCountWarning();
+    if (countWarn && hardCountPanel) {
+      document.getElementById('hardCountWarningText').textContent = countWarn.msg;
+      document.getElementById('hardCountWarningStat').textContent = countWarn.stat;
+      hardCountPanel.style.display = 'block';
+    }
+    const distWarn = checkHardSessionDistRatioWarning();
+    if (distWarn && hardDistPanel) {
+      document.getElementById('hardDistWarningText').textContent = distWarn.msg;
+      document.getElementById('hardDistWarningStat').textContent = distWarn.stat;
+      hardDistPanel.style.display = 'block';
+    }
+  }
 
   const days = getDays(y,m), off = getOffset(y,m), numWeeks = getWeeks(y,m);
   const today = new Date();
@@ -2360,6 +2403,78 @@ function checkProximityRisk(y, m, d) {
     next
   };
 }
+// ── HARD SESSION WEEKLY WARNINGS ──
+
+// Returns the Monday of the current calendar week (today's week)
+function getCurrentWeekMonday() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const day = today.getDay();
+  const diff = (day === 0) ? -6 : 1 - day;
+  const mon = new Date(today);
+  mon.setDate(today.getDate() + diff);
+  return mon;
+}
+
+// Hard sessions for count warning (includes Long Run — it demands recovery)
+// Hard sessions for distance ratio warning (excludes Long Run — it's aerobic base, not high intensity)
+const HARD_SESSIONS_INTENSITY = new Set(['tempo', 'short_int', 'long_int', 'vertical']);
+
+// Collect hard session data for the 7 days starting from mondayDate
+function getHardSessionDataForWeek(mondayDate) {
+  let hardCount = 0;
+  let hardKm = 0;
+  let totalKm = 0;
+  const sessions = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(mondayDate);
+    d.setDate(d.getDate() + i);
+    const y = d.getFullYear(), m = d.getMonth(), day = d.getDate();
+    const act1 = getAct(y, m, day), act2 = getAct2(y, m, day);
+    const km1 = getKm(y, m, day), km2 = getKm2(y, m, day);
+    if (act1) {
+      totalKm += km1;
+      if (HARD_SESSIONS.has(act1)) { hardCount++; }
+      if (HARD_SESSIONS_INTENSITY.has(act1)) { hardKm += km1; sessions.push((ACT_MAP[act1]||{label:act1}).label); }
+    }
+    if (act2) {
+      totalKm += km2;
+      if (HARD_SESSIONS.has(act2)) { hardCount++; }
+      if (HARD_SESSIONS_INTENSITY.has(act2)) { hardKm += km2; sessions.push((ACT_MAP[act2]||{label:act2}).label); }
+    }
+  }
+  return { hardCount, hardKm: Math.round(hardKm * 10) / 10, totalKm: Math.round(totalKm * 10) / 10, sessions };
+}
+
+// Warning: more than 2 hard sessions in the last 7 days
+function checkHardSessionCountWarning() {
+  const mon = getCurrentWeekMonday();
+  const { hardCount, sessions } = getHardSessionDataForWeek(mon);
+  if (hardCount <= 2) return null;
+  return {
+    msg: 'You have ' + hardCount + ' hard sessions planned this week. More than 2 hard sessions in 7 days increases injury risk and impairs recovery.',
+    stat: 'Hard sessions: ' + sessions.join(', '),
+    count: hardCount
+  };
+}
+
+// Warning: hard session weekly distance > 20% of total running distance
+function checkHardSessionDistRatioWarning() {
+  const mon = getCurrentWeekMonday();
+  const { hardKm, totalKm } = getHardSessionDataForWeek(mon);
+  if (totalKm <= 0 || hardKm <= 0) return null;
+  const ratio = hardKm / totalKm;
+  if (ratio <= 0.20) return null;
+  const pct = Math.round(ratio * 100);
+  return {
+    msg: 'Hard session distance makes up ' + pct + '% of your total weekly running distance. Keeping hard efforts below 20% of weekly volume helps reduce injury risk.',
+    stat: 'Hard session km: ' + hardKm + '  |  Total week km: ' + totalKm + '  |  Ratio: ' + pct + '%',
+    pct,
+    hardKm,
+    totalKm
+  };
+}
+
 // ── PROXIMITY TOOLTIP ──
 const proximityTooltip = document.getElementById('proximityTooltip');
 let proximityHideTimer = null;
