@@ -1634,6 +1634,8 @@ function renderCalendar() {
   const today = new Date();
   const curWeekIdx = getCurrentWeekIndex(y, m);
   const { avg: avg6 } = calcAvg3(y, m);
+  const { baseline: cycleBaseline } = detectTrainingState();
+  const effectiveBaseline = cycleBaseline > 0 ? cycleBaseline : avg6;
   const grid = document.getElementById('calGrid');
   grid.innerHTML = '';
 
@@ -1642,8 +1644,8 @@ function renderCalendar() {
     row.className = 'week-row';
     const isCurrent = (w === curWeekIdx);
     const wkm = calcWeekKm(y,m,w);
-    const isOver = isCurrent && avg6 > 0 && wkm > avg6 * 1.10;
-    const isWarning = isCurrent && avg6 > 0 && wkm > avg6 * 1.30;
+    const isOver = isCurrent && effectiveBaseline > 0 && wkm > effectiveBaseline * 1.10;
+    const isWarning = isCurrent && effectiveBaseline > 0 && wkm > effectiveBaseline * 1.30;
 
     for (let dow=0; dow<7; dow++) {
       const pos = w*7 + dow;
@@ -1808,13 +1810,14 @@ function renderCalendar() {
           if (risk) {
             const panel = document.getElementById('weekWarningPanel');
             document.getElementById('weekWarningText').textContent = risk.msg;
+            const statLabel = risk.stateLabel ? risk.stateLabel + '  |  ' : '';
             document.getElementById('weekWarningStat').textContent =
-              'This week: ' + risk.weekKm + ' km  |  3-week avg: ' + risk.avg6 + ' km';
+              statLabel + 'This week: ' + risk.weekKm + ' km  |  Baseline (' + (risk.baselineLabel || 'recent') + '): ' + risk.avg6 + ' km';
             panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
             // also show tooltip
-            showInjuryTooltip(kmCell, 'Weekly Volume Risk',
+            showInjuryTooltip(kmCell, risk.stateLabel || 'Weekly Volume Risk',
               risk.msg,
-              'This week: <strong>' + risk.weekKm + ' km</strong> &nbsp;|&nbsp; 3w avg: <strong>' + risk.avg6 + ' km</strong>'
+              'This week: <strong>' + risk.weekKm + ' km</strong> &nbsp;|&nbsp; Baseline: <strong>' + risk.avg6 + ' km</strong>'
             );
           }
         });
@@ -1831,8 +1834,10 @@ function updateWeekKm(w, row, avg6) {
   if (!cell) return;
   const isCurrent = cell.dataset.isCurrent === '1';
   const wkm = calcWeekKm(currentYear, currentMonth, w);
-  const isOver = isCurrent && avg6 > 0 && wkm > avg6 * 1.10;
-  const isWarning = isCurrent && avg6 > 0 && wkm > avg6 * 1.30;
+  const { baseline: cycleBaseline } = detectTrainingState();
+  const effBaseline = (cycleBaseline > 0 ? cycleBaseline : avg6);
+  const isOver = isCurrent && effBaseline > 0 && wkm > effBaseline * 1.10;
+  const isWarning = isCurrent && effBaseline > 0 && wkm > effBaseline * 1.30;
   const totalEl = cell.querySelector('.wk-total');
   if (totalEl) { totalEl.textContent = wkm; totalEl.className = 'wk-total' + (isWarning ? ' over' : isOver ? ' caution' : ''); }
   if (isCurrent) {
@@ -2108,24 +2113,150 @@ function checkSessionRisk(km, y, m, d) {
   return { pct, longestRecent, km, level, msg };
 }
 
-// Check week risk: returns object or null
-function checkWeekRisk(weekKm, avg6) {
-  if (!avg6 || avg6 <= 0 || !weekKm || weekKm <= 0) return null;
-  const increase = (weekKm - avg6) / avg6;
+// ── CYCLE-AWARE TRAINING STATE ──
+// Classifies the most recent completed week and returns a training state
+// along with the appropriate baseline to compare planned volume against.
+//
+// States:
+//   'normal'   — steady build, use top-3-of-6 average as baseline
+//   'recovery' — last week was a clear down week (intentional)
+//   'return'   — week after a recovery week, use pre-recovery loading baseline
+//   'break'    — multiple very low weeks or a zero week, use conservative recent baseline
+//
+// Returns { state, baseline, stateLabel, baselineLabel }
+function detectTrainingState() {
+  const today = new Date();
+  const thisMonday = getMondayOf(today);
+
+  // Collect last 6 completed weeks (most recent first)
+  const weeks = [];
+  for (let i = 1; i <= 6; i++) {
+    const mon = new Date(thisMonday);
+    mon.setDate(mon.getDate() - i * 7);
+    weeks.push(calcWeekKmFromMonday(mon)); // weeks[0] = last week, weeks[5] = 6 weeks ago
+  }
+
+  const lastWeek = weeks[0];
+  const olderWeeks = weeks.slice(1); // weeks 2–6 ago
+
+  // Average of the older 5 weeks (excluding most recent)
+  const olderPositive = olderWeeks.filter(w => w > 0);
+  const olderAvg = olderPositive.length > 0
+    ? olderPositive.reduce((a, b) => a + b, 0) / olderPositive.length
+    : 0;
+
+  // Top-3-of-6 baseline (standard build baseline)
+  const sorted = [...weeks].sort((a, b) => b - a);
+  const top3 = sorted.slice(0, 3);
+  const top3Baseline = top3.length > 0 ? Math.round(top3.reduce((a, b) => a + b, 0) / top3.length) : 0;
+
+  // Recent 3-week average (weeks 1–3 ago, for conservative/return baseline)
+  const recent3 = weeks.slice(0, 3);
+  const recent3Avg = recent3.length > 0 ? Math.round(recent3.reduce((a, b) => a + b, 0) / recent3.length) : 0;
+
+  // Blended conservative baseline: weight recent weeks more heavily
+  // Used after breaks: 60% recent 3w avg + 40% top-3 of older weeks
+  const olderSorted = [...olderWeeks].sort((a, b) => b - a);
+  const olderTop3 = olderSorted.slice(0, Math.min(3, olderSorted.length));
+  const olderTop3Avg = olderTop3.length > 0 ? Math.round(olderTop3.reduce((a, b) => a + b, 0) / olderTop3.length) : 0;
+  const breakBaseline = recent3Avg > 0
+    ? Math.round(recent3Avg * 0.6 + olderTop3Avg * 0.4)
+    : Math.round(olderTop3Avg * 0.7);
+
+  // Pre-recovery baseline: top-3 of weeks 2–6 (skipping the most recent down week)
+  const preRecoveryTop3 = olderSorted.slice(0, 3);
+  const preRecoveryBaseline = preRecoveryTop3.length > 0
+    ? Math.round(preRecoveryTop3.reduce((a, b) => a + b, 0) / preRecoveryTop3.length)
+    : top3Baseline;
+
+  // Thresholds for classifying last week
+  const RECOVERY_DROP = 0.35;    // last week is 35%+ below older avg → recovery/break
+  const BREAK_THRESHOLD = 0.60;  // last week is 60%+ below older avg → training break
+  const BREAK_ZERO = 5;          // below this km counts as zero week
+
+  // Count how many of the last 3 weeks look reduced
+  const reducedCount = weeks.slice(0, 3).filter(w => olderAvg > 0 && w < olderAvg * (1 - RECOVERY_DROP)).length;
+
+  let state, baseline, stateLabel, baselineLabel;
+
+  if (lastWeek <= BREAK_ZERO || (olderAvg > 0 && lastWeek < olderAvg * (1 - BREAK_THRESHOLD)) || reducedCount >= 2) {
+    // Training break
+    state = 'break';
+    baseline = breakBaseline > 0 ? breakBaseline : recent3Avg;
+    stateLabel = 'Training break detected';
+    baselineLabel = 'recent actual training';
+  } else if (olderAvg > 0 && lastWeek < olderAvg * (1 - RECOVERY_DROP)) {
+    // Recovery week — check if the week before that was also recovery (then it's a break)
+    state = 'recovery';
+    baseline = preRecoveryBaseline > 0 ? preRecoveryBaseline : top3Baseline;
+    stateLabel = 'Recovery week detected';
+    baselineLabel = 'build weeks before recovery';
+  } else {
+    // Check if last week was a recovery from the week before it
+    const weekBeforeLast = weeks[1];
+    const olderFromW2 = weeks.slice(2);
+    const olderFromW2Avg = olderFromW2.filter(w => w > 0).length > 0
+      ? olderFromW2.filter(w => w > 0).reduce((a, b) => a + b, 0) / olderFromW2.filter(w => w > 0).length
+      : 0;
+    const wasRecovery = olderFromW2Avg > 0 && weekBeforeLast < olderFromW2Avg * (1 - RECOVERY_DROP)
+      && weekBeforeLast > BREAK_ZERO;
+
+    if (wasRecovery) {
+      // Return week after a recovery week
+      state = 'return';
+      // Use pre-recovery loading (top3 of weeks 3–6)
+      const preRecSorted = [...weeks.slice(2)].sort((a, b) => b - a);
+      const preRecTop3 = preRecSorted.slice(0, 3);
+      baseline = preRecTop3.length > 0
+        ? Math.round(preRecTop3.reduce((a, b) => a + b, 0) / preRecTop3.length)
+        : top3Baseline;
+      stateLabel = 'Return week detected';
+      baselineLabel = 'build weeks before recovery';
+    } else {
+      // Normal build
+      state = 'normal';
+      baseline = top3Baseline;
+      stateLabel = 'Build week';
+      baselineLabel = 'recent loading weeks';
+    }
+  }
+
+  return { state, baseline, stateLabel, baselineLabel, weeks };
+}
+
+// Check week risk: cycle-aware version
+// Returns object or null
+function checkWeekRisk(weekKm, _legacyBaseline) {
+  if (!weekKm || weekKm <= 0) return null;
+  const { state, baseline, stateLabel, baselineLabel } = detectTrainingState();
+  if (!baseline || baseline <= 0) return null;
+
+  const increase = (weekKm - baseline) / baseline;
   if (increase <= 0.10) return null;
+
   const pct = Math.round(increase * 100);
   let level, msg;
+
+  const statePrefix = state === 'recovery'
+    ? 'Recovery week detected — comparison adjusted to earlier build weeks. '
+    : state === 'return'
+    ? 'Return week detected — comparing to build weeks before recovery. '
+    : state === 'break'
+    ? 'Training break detected — older peak weeks are no longer used as the main baseline. '
+    : '';
+
   if (pct <= 30) {
     level = 'caution';
-    msg = 'This week is ' + pct + '% above your 3-week average. Caution — watch your load.';
+    msg = statePrefix + 'Planned volume is above your recent training pattern by ' + pct + '%. Watch your load.';
   } else if (pct <= 100) {
     level = 'warning';
-    msg = 'This week is ' + pct + '% above your 3-week average. Warning — plan a lighter week after this.';
+    msg = statePrefix + 'Planned volume is notably above your recent training pattern by ' + pct + '%. Plan a lighter week after this.';
   } else {
     level = 'severe';
-    msg = 'This week is ' + pct + '% above your 3-week average. Severe weekly spike — very high injury risk.';
+    msg = statePrefix + 'Planned volume is well above your recent training pattern by ' + pct + '%. High load spike — consider easing back.';
   }
-  return { pct, avg6, weekKm, level, msg };
+
+  return { pct, avg6: baseline, weekKm, level, msg, state, stateLabel, baselineLabel };
 }
 
 // ── PROXIMITY WARNING ──
@@ -2135,52 +2266,61 @@ function dateToTimestamp(y, m, d) {
   return new Date(y, m, d).getTime();
 }
 
-// Returns the nearest hard session day within 48h AFTER the given date (exclusive of same day)
-// and the nearest hard session day within 48h BEFORE the given date
-// Returns { next: {y,m,d,label,hoursAway} | null, prev: ... | null }
-function getProximityInfo(y, m, d) {
-  const ts = dateToTimestamp(y, m, d);
-  const h48 = 48 * 60 * 60 * 1000;
-  let next = null, prev = null;
-
-  // Look ahead/behind up to 2 days
-  for (let delta = 1; delta <= 2; delta++) {
-    const after = new Date(ts + delta * 86400000);
-    const ay = after.getFullYear(), am = after.getMonth(), ad = after.getDate();
-    const act1a = getAct(ay, am, ad), act2a = getAct2(ay, am, ad);
-    if ((HARD_SESSIONS.has(act1a) || HARD_SESSIONS.has(act2a)) && !next) {
-      const hoursAway = delta * 24;
-      const label1 = HARD_SESSIONS.has(act1a) ? (ACT_MAP[act1a] || {label:act1a}).label : null;
-      const label2 = HARD_SESSIONS.has(act2a) ? (ACT_MAP[act2a] || {label:act2a}).label : null;
-      const sessionLabel = [label1, label2].filter(Boolean).join(' + ');
-      next = { y: ay, m: am, d: ad, label: sessionLabel, hoursAway };
-    }
-
-    const before = new Date(ts - delta * 86400000);
-    const by = before.getFullYear(), bm = before.getMonth(), bd = before.getDate();
-    const act1b = getAct(by, bm, bd), act2b = getAct2(by, bm, bd);
-    if ((HARD_SESSIONS.has(act1b) || HARD_SESSIONS.has(act2b)) && !prev) {
-      const hoursAway = delta * 24;
-      const label1 = HARD_SESSIONS.has(act1b) ? (ACT_MAP[act1b] || {label:act1b}).label : null;
-      const label2 = HARD_SESSIONS.has(act2b) ? (ACT_MAP[act2b] || {label:act2b}).label : null;
-      const sessionLabel = [label1, label2].filter(Boolean).join(' + ');
-      prev = { y: by, m: bm, d: bd, label: sessionLabel, hoursAway };
-    }
-  }
-
-  return { next, prev };
-}
-
 // Returns whether a day has a hard session
 function dayHasHardSession(y, m, d) {
   return HARD_SESSIONS.has(getAct(y, m, d)) || HARD_SESSIONS.has(getAct2(y, m, d));
 }
 
-// Returns proximity warning info for a hard-session day, or null
-// Warning: this hard session day is within 48h of another hard session
+// Collect all hard session days within the displayed calendar window (±60 days of today)
+// Returns sorted array of { ts, y, m, d, label }
+function getAllHardSessionDays(daysAround = 60) {
+  const today = new Date();
+  const results = [];
+  for (let delta = -daysAround; delta <= daysAround; delta++) {
+    const dt = new Date(today);
+    dt.setDate(dt.getDate() + delta);
+    const y = dt.getFullYear(), m = dt.getMonth(), d = dt.getDate();
+    const act1 = getAct(y, m, d), act2 = getAct2(y, m, d);
+    const labels = [];
+    if (HARD_SESSIONS.has(act1)) labels.push((ACT_MAP[act1] || {label:act1}).label);
+    if (HARD_SESSIONS.has(act2)) labels.push((ACT_MAP[act2] || {label:act2}).label);
+    if (labels.length > 0) {
+      results.push({ ts: dt.getTime(), y, m, d, label: labels.join(' + ') });
+    }
+  }
+  // sort by date ascending
+  results.sort((a, b) => a.ts - b.ts);
+  return results;
+}
+
+// Returns proximity warning info for a hard-session day, or null.
+// Uses sorted list of all hard sessions — checks if this day and
+// the next hard session on a different date are within 48h.
+// Only the first violation in the week is surfaced.
 function checkProximityRisk(y, m, d) {
   if (!dayHasHardSession(y, m, d)) return null;
-  const { next, prev } = getProximityInfo(y, m, d);
+  const ts = dateToTimestamp(y, m, d);
+  const hardDays = getAllHardSessionDays(60);
+  const h48 = 48 * 60 * 60 * 1000;
+
+  // Find this day's position
+  const myIdx = hardDays.findIndex(hd => hd.ts === ts);
+  if (myIdx === -1) return null;
+
+  let next = null, prev = null;
+
+  // Next hard session on a different date
+  if (myIdx + 1 < hardDays.length) {
+    const n = hardDays[myIdx + 1];
+    if (n.ts - ts <= h48) next = { ...n, hoursAway: Math.round((n.ts - ts) / 3600000) };
+  }
+
+  // Previous hard session on a different date
+  if (myIdx - 1 >= 0) {
+    const p = hardDays[myIdx - 1];
+    if (ts - p.ts <= h48) prev = { ...p, hoursAway: Math.round((ts - p.ts) / 3600000) };
+  }
+
   if (!next && !prev) return null;
 
   const parts = [];
@@ -2199,7 +2339,6 @@ function checkProximityRisk(y, m, d) {
     next
   };
 }
-
 // ── PROXIMITY TOOLTIP ──
 const proximityTooltip = document.getElementById('proximityTooltip');
 let proximityHideTimer = null;
