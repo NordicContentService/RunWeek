@@ -2299,6 +2299,7 @@ function getAllHardSessionDays(daysAround = 60) {
   for (let delta = -daysAround; delta <= daysAround; delta++) {
     const dt = new Date(today);
     dt.setDate(dt.getDate() + delta);
+    dt.setHours(0, 0, 0, 0);
     const y = dt.getFullYear(), m = dt.getMonth(), d = dt.getDate();
     const act1 = getAct(y, m, d), act2 = getAct2(y, m, d);
     const labels = [];
