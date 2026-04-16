@@ -858,6 +858,133 @@
   }
 
   .popup-done-btn:hover { opacity: 0.88; }
+
+  /* ── KM DISPLAY BUTTON ── */
+  .km-display-btn {
+    width: 100%;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: var(--font);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    background: var(--card);
+    color: var(--text-primary);
+    padding: 7px 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: border-color 0.15s, background 0.15s;
+  }
+
+  .km-display-btn:hover:not(:disabled) { border-color: var(--orange); background: var(--orange-light); }
+  .km-display-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .km-display-btn.has-value { color: var(--orange); border-color: var(--orange); }
+
+  /* ── KEYPAD OVERLAY ── */
+  .keypad-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: var(--overlay-bg);
+    z-index: 500;
+    align-items: flex-end;
+    justify-content: center;
+  }
+
+  .keypad-overlay.open { display: flex; }
+
+  .keypad-sheet {
+    background: var(--card);
+    border-radius: 24px 24px 0 0;
+    width: 100%;
+    max-width: 420px;
+    padding: 20px 20px 32px;
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.2);
+    animation: sheetUp 0.22s cubic-bezier(0.34,1.2,0.64,1);
+  }
+
+  @keyframes sheetUp {
+    from { transform: translateY(60px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+
+  .keypad-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .keypad-label {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--text-muted);
+  }
+
+  .keypad-clear-btn {
+    background: none;
+    border: none;
+    font-size: 13px;
+    font-family: var(--font);
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 2px 6px;
+  }
+
+  .keypad-clear-btn:hover { color: var(--orange); }
+
+  .keypad-display {
+    font-size: 42px;
+    font-weight: 700;
+    color: var(--text-primary);
+    text-align: center;
+    letter-spacing: -0.02em;
+    min-height: 60px;
+    line-height: 60px;
+    margin-bottom: 16px;
+  }
+
+  .keypad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .kp-btn {
+    background: var(--cell-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    font-size: 22px;
+    font-weight: 500;
+    font-family: var(--font);
+    color: var(--text-primary);
+    padding: 16px 0;
+    cursor: pointer;
+    transition: background 0.1s, transform 0.08s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .kp-btn:active { background: var(--orange-mid); transform: scale(0.94); }
+  .kp-back { font-size: 18px; color: var(--text-secondary); }
+  .kp-clr { font-size: 14px; font-weight: 600; color: var(--text-secondary); }
+
+  .keypad-done-btn {
+    width: 100%;
+    background: var(--orange);
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    padding: 15px;
+    font-size: 16px;
+    font-weight: 700;
+    font-family: var(--font);
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+
+  .keypad-done-btn:hover { opacity: 0.88; }
 </style>
 <script>
   window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
@@ -946,7 +1073,7 @@
         </div>
         <div class="popup-field">
           <label>Distance</label>
-          <select class="popup-select" id="popup-km1"></select>
+          <button class="km-display-btn" id="popup-km1" type="button">—</button>
         </div>
       </div>
     </div>
@@ -960,12 +1087,37 @@
         </div>
         <div class="popup-field">
           <label>Distance</label>
-          <select class="popup-select" id="popup-km2"></select>
+          <button class="km-display-btn" id="popup-km2" type="button">—</button>
         </div>
       </div>
     </div>
 
     <button class="popup-done-btn" id="popupDoneBtn">Done</button>
+  </div>
+</div>
+
+<!-- Keypad Overlay -->
+<div class="keypad-overlay" id="keypadOverlay">
+  <div class="keypad-sheet">
+    <div class="keypad-header">
+      <span class="keypad-label" id="keypadLabel">Distance</span>
+    </div>
+    <div class="keypad-display" id="keypadDisplay">—</div>
+    <div class="keypad-grid">
+      <button class="kp-btn" data-val="1">1</button>
+      <button class="kp-btn" data-val="2">2</button>
+      <button class="kp-btn" data-val="3">3</button>
+      <button class="kp-btn" data-val="4">4</button>
+      <button class="kp-btn" data-val="5">5</button>
+      <button class="kp-btn" data-val="6">6</button>
+      <button class="kp-btn" data-val="7">7</button>
+      <button class="kp-btn" data-val="8">8</button>
+      <button class="kp-btn" data-val="9">9</button>
+      <button class="kp-btn" data-val=".">.</button>
+      <button class="kp-btn" data-val="0">0</button>
+      <button class="kp-btn kp-clr" id="keypadClearBtn">CLR</button>
+    </div>
+    <button class="keypad-done-btn" id="keypadDoneBtn">Done</button>
   </div>
 </div>
 
@@ -1101,19 +1253,23 @@ function calcWeekKmFromMonday(mondayDate) {
     total += getKm(d.getFullYear(), d.getMonth(), d.getDate());
     total += getKm2(d.getFullYear(), d.getMonth(), d.getDate());
   }
-  return total;
+  return Math.round(total * 10) / 10;
+}
+
+function getWeekMonday(y, m, w) {
+  // Returns the Monday date for visual week row w in the calendar for month y/m
+  const off = getOffset(y, m);
+  // Day 1 of month sits at column `off` in the grid; week w starts at grid pos w*7
+  // The date of the Monday of week w:
+  const firstDayDate = new Date(y, m, 1);
+  const mondayDate = new Date(firstDayDate);
+  mondayDate.setDate(1 - off + w * 7);
+  mondayDate.setHours(0, 0, 0, 0);
+  return mondayDate;
 }
 
 function calcWeekKm(y, m, w) {
-  const days = getDays(y,m), off = getOffset(y,m);
-  let t = 0;
-  for (let d=1; d<=days; d++) {
-    if (Math.floor((d-1+off)/7) === w) {
-      t += getKm(y,m,d);
-      t += getKm2(y,m,d);
-    }
-  }
-  return t;
+  return calcWeekKmFromMonday(getWeekMonday(y, m, w));
 }
 
 function getCurrentWeekIndex(y, m) {
@@ -1205,15 +1361,11 @@ function populatePopupSelect(id, current) {
 }
 
 function populatePopupKm(id, current) {
-  const sel = document.getElementById(id);
-  sel.innerHTML = '';
-  KM_OPTIONS.forEach((v, i) => {
-    const opt = document.createElement('option');
-    opt.value = i === 0 ? 0 : v;
-    opt.textContent = i === 0 ? '—' : String(v);
-    if ((i === 0 && current === 0) || (i > 0 && v === current)) opt.selected = true;
-    sel.appendChild(opt);
-  });
+  const btn = document.getElementById(id);
+  const val = current && current !== 0 ? String(current) : '';
+  btn.dataset.km = val;
+  btn.textContent = val ? val : '—';
+  btn.classList.toggle('has-value', !!val);
 }
 
 function closeDayPopup() {
@@ -1222,9 +1374,9 @@ function closeDayPopup() {
 
 function saveDayPopup() {
   const act1 = document.getElementById('popup-act1').value;
-  const km1 = parseInt(document.getElementById('popup-km1').value) || 0;
+  const km1 = parseFloat(document.getElementById('popup-km1').dataset.km) || 0;
   const act2 = document.getElementById('popup-act2').value;
-  const km2 = parseInt(document.getElementById('popup-km2').value) || 0;
+  const km2 = parseFloat(document.getElementById('popup-km2').dataset.km) || 0;
 
   const info1 = ACT_MAP[act1] || ACT_MAP[''];
   const info2 = ACT_MAP[act2] || ACT_MAP[''];
@@ -1521,13 +1673,87 @@ function init() {
   // Popup act selects update km disabled state
   document.getElementById('popup-act1').addEventListener('change', function() {
     const info = ACT_MAP[this.value] || ACT_MAP[''];
-    document.getElementById('popup-km1').disabled = !info.hasKm;
-    if (!info.hasKm) document.getElementById('popup-km1').value = 0;
+    const btn = document.getElementById('popup-km1');
+    btn.disabled = !info.hasKm;
+    if (!info.hasKm) { btn.dataset.km = ''; btn.textContent = '—'; btn.classList.remove('has-value'); }
   });
   document.getElementById('popup-act2').addEventListener('change', function() {
     const info = ACT_MAP[this.value] || ACT_MAP[''];
-    document.getElementById('popup-km2').disabled = !info.hasKm;
-    if (!info.hasKm) document.getElementById('popup-km2').value = 0;
+    const btn = document.getElementById('popup-km2');
+    btn.disabled = !info.hasKm;
+    if (!info.hasKm) { btn.dataset.km = ''; btn.textContent = '—'; btn.classList.remove('has-value'); }
+  });
+
+  // Keypad
+  let keypadTarget = null; // 'popup-km1' or 'popup-km2'
+  let keypadValue = '';
+
+  function openKeypad(targetId) {
+    keypadTarget = targetId;
+    const btn = document.getElementById(targetId);
+    keypadValue = btn.dataset.km || '';
+    updateKeypadDisplay();
+    document.getElementById('keypadOverlay').classList.add('open');
+  }
+
+  function updateKeypadDisplay() {
+    const disp = document.getElementById('keypadDisplay');
+    disp.textContent = keypadValue === '' ? '—' : keypadValue;
+  }
+
+  function commitKeypad() {
+    if (!keypadTarget) return;
+    const btn = document.getElementById(keypadTarget);
+    // Clean up: remove trailing dot, leading zeros
+    let val = keypadValue.replace(/\.$/, '');
+    const num = parseFloat(val);
+    if (!val || isNaN(num) || num <= 0) {
+      btn.dataset.km = '';
+      btn.textContent = '—';
+      btn.classList.remove('has-value');
+    } else {
+      btn.dataset.km = String(num);
+      btn.textContent = num;
+      btn.classList.add('has-value');
+    }
+    document.getElementById('keypadOverlay').classList.remove('open');
+    keypadTarget = null;
+  }
+
+  document.getElementById('popup-km1').addEventListener('click', function() {
+    if (!this.disabled) openKeypad('popup-km1');
+  });
+  document.getElementById('popup-km2').addEventListener('click', function() {
+    if (!this.disabled) openKeypad('popup-km2');
+  });
+
+  document.querySelectorAll('.kp-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const v = this.dataset.val;
+      if (v === '.') {
+        if (keypadValue.includes('.')) return; // only one decimal
+        if (keypadValue === '') keypadValue = '0';
+        keypadValue += '.';
+      } else {
+        if (keypadValue === '0' && v !== '.') { keypadValue = v; }
+        else { keypadValue += v; }
+        // limit to reasonable length
+        if (keypadValue.length > 5) keypadValue = keypadValue.slice(0, 5);
+      }
+      updateKeypadDisplay();
+    });
+  });
+
+
+  document.getElementById('keypadClearBtn').addEventListener('click', function() {
+    keypadValue = '';
+    updateKeypadDisplay();
+  });
+
+  document.getElementById('keypadDoneBtn').addEventListener('click', commitKeypad);
+
+  document.getElementById('keypadOverlay').addEventListener('click', function(e) {
+    if (e.target === this) commitKeypad();
   });
 }
 
