@@ -1221,7 +1221,7 @@
 
   <div class="summary-section">
     <div class="summary-title">Previous 6 Weeks</div>
-    <div class="history-meta">
+    <div class="history-meta" id="historyMeta">
       <span class="legend-bar" style="background:#1D9E75"></span> Last 3 (used for avg)
     </div>
     <div id="historyBars"></div>
@@ -1860,6 +1860,25 @@ function renderHistory() {
       <span class="bar-km">${w.km}</span>
     </div>
   `).join('');
+
+  // Update legend label based on training state
+  const { state: tState } = detectTrainingState();
+  const metaEl = document.getElementById('historyMeta');
+  if (metaEl) {
+    let dotColor = '#1D9E75';
+    let metaText = 'Last 3 (used for avg)';
+    if (tState === 'recovery') {
+      dotColor = '#E8501A';
+      metaText = 'Recovery week detected — avg uses earlier build weeks';
+    } else if (tState === 'break') {
+      dotColor = '#D93025';
+      metaText = 'Training break — using conservative blended baseline';
+    } else if (tState === 'return') {
+      dotColor = '#185FA5';
+      metaText = 'Return week — avg from build weeks before recovery';
+    }
+    metaEl.innerHTML = '<span class="legend-bar" style="background:' + dotColor + '"></span> ' + metaText;
+  }
 }
 
 // ── EMAIL via mailto (obfuscated) ──
