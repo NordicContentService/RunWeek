@@ -1793,7 +1793,7 @@ function renderCalendar() {
     if (isCurrent) {
       const avgEl = document.createElement('div');
       avgEl.className = 'wk-avg ' + (isWarning ? 'over' : isOver ? 'caution' : 'normal');
-      avgEl.textContent = avg6;
+      avgEl.textContent = effectiveBaseline;
       const avgLbl = document.createElement('div');
       avgLbl.className = 'wk-avg-lbl';
       avgLbl.textContent = 'BL';
