@@ -1042,6 +1042,68 @@
     transform: translateY(0);
   }
 
+  /* ── PROXIMITY WARNING BADGE ── */
+  .proximity-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #E6B800;
+    color: #fff;
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    z-index: 2;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+    transition: background 0.15s;
+  }
+  .proximity-badge:hover { background: #B38600; }
+
+  /* Proximity tooltip (reuses injury tooltip styles but yellow) */
+  .proximity-tooltip {
+    position: fixed;
+    z-index: 9999;
+    background: #FFFBEA;
+    border: 1.5px solid #E6B800;
+    border-radius: 12px;
+    padding: 11px 14px 10px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.13);
+    max-width: 240px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.18s;
+    font-family: var(--font);
+  }
+  [data-theme="dark"] .proximity-tooltip { background: #2A2200; border-color: #E6B800; }
+  .proximity-tooltip.visible { opacity: 1; pointer-events: auto; }
+  .proximity-tooltip-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #B38600;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .proximity-tooltip-body {
+    font-size: 12px;
+    color: var(--text-primary);
+    line-height: 1.5;
+  }
+  .proximity-tooltip-stat {
+    font-size: 11px;
+    color: #B38600;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid #E6B800;
+  }
+
   .injury-tooltip-title {
     font-size: 12px;
     font-weight: 700;
@@ -1252,6 +1314,13 @@
     <button class="send-btn" id="sendBtn">Send message</button>
     <div class="msg-status" id="msgStatus"></div>
   </div>
+</div>
+
+<!-- Proximity Warning Tooltip -->
+<div class="proximity-tooltip" id="proximityTooltip">
+  <div class="proximity-tooltip-title" id="proximityTooltipTitle"></div>
+  <div class="proximity-tooltip-body" id="proximityTooltipBody"></div>
+  <div class="proximity-tooltip-stat" id="proximityTooltipStat"></div>
 </div>
 
 <script>
@@ -1467,7 +1536,11 @@ function openDayPopup(y, m, d) {
   const warningStat = document.getElementById('popupWarningStat');
   const risk1 = info1.hasKm && km1 > 0 ? checkSessionRisk(km1, y, m, d) : null;
   const risk2 = info2.hasKm && km2 > 0 ? checkSessionRisk(km2, y, m, d) : null;
-  if (risk1 || risk2) {
+
+  // Proximity risk check
+  const proxRisk = checkProximityRisk(y, m, d);
+
+  if (risk1 || risk2 || proxRisk) {
     warningEl.style.display = 'block';
     const lines = [];
     const stats = [];
@@ -1478,6 +1551,10 @@ function openDayPopup(y, m, d) {
     if (risk2) {
       lines.push('Session 2: ' + risk2.msg);
       stats.push('S2 This run: ' + risk2.km + ' km  |  Recent longest: ' + risk2.longestRecent + ' km');
+    }
+    if (proxRisk) {
+      lines.push('⏱ Hard session proximity: ' + proxRisk.myLabel + ' is within 48h of another hard effort. Allow more recovery.');
+      stats.push(proxRisk.nearby.join('  ·  '));
     }
     warningText.textContent = lines.join(' ');
     warningStat.textContent = stats.join('  ·  ');
@@ -1670,6 +1747,23 @@ function renderCalendar() {
           empty.className = 'day-empty-hint';
           empty.textContent = '+';
           cell.appendChild(empty);
+        }
+
+        // Proximity warning badge (hard sessions within 48h of each other)
+        if (dayHasHardSession(y, m, dayNum)) {
+          const proxInfo = checkProximityRisk(y, m, dayNum);
+          if (proxInfo) {
+            const proxBadge = document.createElement('span');
+            proxBadge.className = 'proximity-badge';
+            proxBadge.textContent = '⏱';
+            proxBadge.title = '';
+            proxBadge.addEventListener('click', (e) => {
+              e.stopPropagation();
+              showProximityTooltip(proxBadge, proxInfo);
+              openDayPopup(y, m, dayNum);
+            });
+            cell.appendChild(proxBadge);
+          }
         }
 
         const dayNumCopy = dayNum;
@@ -2033,7 +2127,119 @@ function checkWeekRisk(weekKm, avg6) {
   return { pct, avg6, weekKm, level, msg };
 }
 
-// ── TOOLTIP ──
+// ── PROXIMITY WARNING ──
+const HARD_SESSIONS = new Set(['tempo', 'short_int', 'long_int', 'long']);
+
+function dateToTimestamp(y, m, d) {
+  return new Date(y, m, d).getTime();
+}
+
+// Returns the nearest hard session day within 48h AFTER the given date (exclusive of same day)
+// and the nearest hard session day within 48h BEFORE the given date
+// Returns { next: {y,m,d,label,hoursAway} | null, prev: ... | null }
+function getProximityInfo(y, m, d) {
+  const ts = dateToTimestamp(y, m, d);
+  const h48 = 48 * 60 * 60 * 1000;
+  let next = null, prev = null;
+
+  // Look ahead/behind up to 2 days
+  for (let delta = 1; delta <= 2; delta++) {
+    const after = new Date(ts + delta * 86400000);
+    const ay = after.getFullYear(), am = after.getMonth(), ad = after.getDate();
+    const act1a = getAct(ay, am, ad), act2a = getAct2(ay, am, ad);
+    if ((HARD_SESSIONS.has(act1a) || HARD_SESSIONS.has(act2a)) && !next) {
+      const hoursAway = delta * 24;
+      const label1 = HARD_SESSIONS.has(act1a) ? (ACT_MAP[act1a] || {label:act1a}).label : null;
+      const label2 = HARD_SESSIONS.has(act2a) ? (ACT_MAP[act2a] || {label:act2a}).label : null;
+      const sessionLabel = [label1, label2].filter(Boolean).join(' + ');
+      next = { y: ay, m: am, d: ad, label: sessionLabel, hoursAway };
+    }
+
+    const before = new Date(ts - delta * 86400000);
+    const by = before.getFullYear(), bm = before.getMonth(), bd = before.getDate();
+    const act1b = getAct(by, bm, bd), act2b = getAct2(by, bm, bd);
+    if ((HARD_SESSIONS.has(act1b) || HARD_SESSIONS.has(act2b)) && !prev) {
+      const hoursAway = delta * 24;
+      const label1 = HARD_SESSIONS.has(act1b) ? (ACT_MAP[act1b] || {label:act1b}).label : null;
+      const label2 = HARD_SESSIONS.has(act2b) ? (ACT_MAP[act2b] || {label:act2b}).label : null;
+      const sessionLabel = [label1, label2].filter(Boolean).join(' + ');
+      prev = { y: by, m: bm, d: bd, label: sessionLabel, hoursAway };
+    }
+  }
+
+  return { next, prev };
+}
+
+// Returns whether a day has a hard session
+function dayHasHardSession(y, m, d) {
+  return HARD_SESSIONS.has(getAct(y, m, d)) || HARD_SESSIONS.has(getAct2(y, m, d));
+}
+
+// Returns proximity warning info for a hard-session day, or null
+// Warning: this hard session day is within 48h of another hard session
+function checkProximityRisk(y, m, d) {
+  if (!dayHasHardSession(y, m, d)) return null;
+  const { next, prev } = getProximityInfo(y, m, d);
+  if (!next && !prev) return null;
+
+  const parts = [];
+  if (prev) parts.push(prev.label + ' ' + prev.hoursAway + 'h ago');
+  if (next) parts.push(next.label + ' in ' + next.hoursAway + 'h');
+
+  const myLabels = [];
+  const act1 = getAct(y, m, d), act2 = getAct2(y, m, d);
+  if (HARD_SESSIONS.has(act1)) myLabels.push((ACT_MAP[act1]||{label:act1}).label);
+  if (HARD_SESSIONS.has(act2)) myLabels.push((ACT_MAP[act2]||{label:act2}).label);
+
+  return {
+    myLabel: myLabels.join(' + '),
+    nearby: parts,
+    prev,
+    next
+  };
+}
+
+// ── PROXIMITY TOOLTIP ──
+const proximityTooltip = document.getElementById('proximityTooltip');
+let proximityHideTimer = null;
+
+function showProximityTooltip(el, info) {
+  clearTimeout(proximityHideTimer);
+  document.getElementById('proximityTooltipTitle').textContent = '⏱ Hard Session Proximity';
+  document.getElementById('proximityTooltipBody').textContent =
+    info.myLabel + ' is within 48h of another hard session. Recovery between hard efforts may be insufficient.';
+  document.getElementById('proximityTooltipStat').textContent = info.nearby.join('  ·  ');
+
+  proximityTooltip.classList.remove('visible');
+  proximityTooltip.style.opacity = '0';
+
+  const rect = el.getBoundingClientRect();
+  const tw = 240;
+  let left = rect.left + rect.width / 2 - tw / 2;
+  let top = rect.bottom + 8 + window.scrollY;
+
+  if (left + tw > window.innerWidth - 8) left = window.innerWidth - tw - 8;
+  if (left < 8) left = 8;
+  if (rect.bottom + 8 + 140 > window.innerHeight) top = rect.top - 8 - 160 + window.scrollY;
+
+  proximityTooltip.style.left = left + 'px';
+  proximityTooltip.style.top = top + 'px';
+  proximityTooltip.style.maxWidth = tw + 'px';
+  requestAnimationFrame(() => proximityTooltip.classList.add('visible'));
+}
+
+function hideProximityTooltip(delay = 200) {
+  clearTimeout(proximityHideTimer);
+  proximityHideTimer = setTimeout(() => proximityTooltip.classList.remove('visible'), delay);
+}
+
+document.addEventListener('click', (e) => {
+  if (!proximityTooltip.contains(e.target) && !e.target.classList.contains('proximity-badge')) {
+    hideProximityTooltip(0);
+  }
+});
+
+// ── INJURY TOOLTIP ──
 const tooltip = document.getElementById('injuryTooltip');
 let tooltipHideTimer = null;
 
