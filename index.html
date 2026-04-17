@@ -2772,20 +2772,45 @@ function checkHardSessionCountWarning(mondayDate) {
   };
 }
 
-// Warning: hard session weekly distance > 20% of total running distance
+// Warning: hard session weekly distance > 20% of total running distance.
+// If the current week's total is below 70% of the BL (a low-volume or partial week),
+// the denominator used for the 20% check switches to the BL number itself.
+// This prevents easy sessions from being unfairly flagged just because a runner
+// is in a recovery or build-up week where the total is naturally small.
 function checkHardSessionDistRatioWarning(mondayDate) {
   const mon = mondayDate || getCurrentWeekMonday();
   const { hardKm, totalKm } = getHardSessionDataForWeek(mon);
   if (totalKm <= 0 || hardKm <= 0) return null;
-  const ratio = hardKm / totalKm;
+
+  // Determine the effective baseline for this week
+  const { baseline: cycleBaseline } = detectTrainingState();
+  const { avg: avg6 } = calcAvg3(currentYear, currentMonth);
+  const bl = cycleBaseline > 0 ? cycleBaseline : avg6;
+
+  // Choose denominator: use BL when actual week is below 70% of BL, otherwise use actual total
+  const weekBelowBL = bl > 0 && totalKm < bl * 0.70;
+  const denominator = weekBelowBL && bl > 0 ? bl : totalKm;
+
+  const ratio = hardKm / denominator;
   if (ratio <= 0.20) return null;
   const pct = Math.round(ratio * 100);
+
+  const denomLabel = weekBelowBL
+    ? 'BL (' + denominator + ' ' + getDistUnit() + ')'
+    : 'total week ' + getDistUnit() + ' (' + denominator + ')';
+
+  const notePrefix = weekBelowBL
+    ? 'Week is below 70% of baseline — hard session ratio judged against BL. '
+    : '';
+
   return {
-    msg: 'Hard session distance makes up ' + pct + '% of your total weekly running distance. Keeping hard efforts below 20% of weekly volume helps reduce injury risk.',
-    stat: 'Hard session ' + getDistUnit() + ': ' + hardKm + '  |  Total week ' + getDistUnit() + ': ' + totalKm + '  |  Ratio: ' + pct + '%',
+    msg: notePrefix + 'Hard session distance makes up ' + pct + '% of your ' + (weekBelowBL ? 'baseline' : 'total weekly') + ' running distance. Keeping hard efforts below 20% of weekly volume helps reduce injury risk.',
+    stat: 'Hard session ' + getDistUnit() + ': ' + hardKm + '  |  ' + denomLabel + '  |  Ratio: ' + pct + '%',
     pct,
     hardKm,
-    totalKm
+    totalKm,
+    denominator,
+    weekBelowBL
   };
 }
 
