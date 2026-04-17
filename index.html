@@ -540,8 +540,21 @@
     font-size: 13px;
     font-weight: 500;
     color: var(--text-secondary);
-    width: 38px;
+    width: 36px;
     flex-shrink: 0;
+    text-align: right;
+  }
+
+  .bar-elev {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    width: 46px;
+    flex-shrink: 0;
+    text-align: right;
+    padding-left: 4px;
+    border-left: 1px solid var(--border);
+    margin-left: 4px;
   }
 
   /* ── MODAL OVERLAY ── */
@@ -868,6 +881,81 @@
 
   .popup-done-btn:hover { opacity: 0.88; }
 
+  /* ── UNIT TOGGLE ── */
+  .unit-toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--cell-bg);
+    border-radius: 10px;
+    padding: 9px 12px;
+    margin-bottom: 12px;
+  }
+
+  .unit-toggle-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .unit-switch {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .unit-pill {
+    width: 36px;
+    height: 20px;
+    background: var(--orange);
+    border-radius: 10px;
+    position: relative;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+
+  .unit-pill.metric { background: var(--orange); }
+  .unit-pill.imperial { background: #5B8DD9; }
+
+  .unit-pill::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 14px;
+    height: 14px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+
+  .unit-pill.imperial::after { transform: translateX(16px); }
+
+  .unit-opt { transition: color 0.15s; }
+  .unit-opt.active { color: var(--text-primary); }
+
+  /* ── ELEVATION GAIN ROW ── */
+  .elevation-row {
+    display: none;
+    margin-top: 8px;
+  }
+
+  .elevation-row.visible {
+    display: block;
+  }
+
+  .elevation-row .popup-row {
+    margin-top: 0;
+  }
+
   /* ── KM DISPLAY BUTTON ── */
   .km-display-btn {
     width: 100%;
@@ -995,8 +1083,8 @@
 
   .keypad-done-btn:hover { opacity: 0.88; }
 
-  /* ── INJURY WARNING BADGE ── */
-  .injury-badge {
+  /* ── UNIFIED DAY WARNING BADGE ── */
+  .day-warn-badge {
     position: absolute;
     top: 2px;
     right: 2px;
@@ -1010,14 +1098,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
     z-index: 10;
     line-height: 1;
     box-shadow: 0 1px 4px rgba(217,48,37,0.4);
-    flex-shrink: 0;
+    pointer-events: none;
   }
-
-  .injury-badge:hover { background: #b71c1c; }
 
   /* ── INJURY TOOLTIP ── */
   .injury-tooltip {
@@ -1041,29 +1126,6 @@
     opacity: 1;
     transform: translateY(0);
   }
-
-  /* ── PROXIMITY WARNING BADGE ── */
-  .proximity-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: #E6B800;
-    color: #fff;
-    font-size: 9px;
-    font-weight: 800;
-    line-height: 1;
-    cursor: pointer;
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    z-index: 2;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.18);
-    transition: background 0.15s;
-  }
-  .proximity-badge:hover { background: #B38600; }
 
   /* Proximity tooltip (reuses injury tooltip styles but yellow) */
   .proximity-tooltip {
@@ -1141,11 +1203,18 @@
     color: #B38600;
   }
 </style>
+
+
+<!-- Vercel Analytics: only loads when deployed, silent locally -->
 <script>
-  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+  if (location.hostname !== 'localhost' && !location.protocol.startsWith('file')) {
+    window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+    var s = document.createElement('script');
+    s.defer = true;
+    s.src = '/_vercel/insights/script.js';
+    document.head.appendChild(s);
+  }
 </script>
-<script defer src="/_vercel/insights/script.js"></script>
-</head>
 <body>
 
 <!-- Injury Risk Tooltip -->
@@ -1209,36 +1278,6 @@
     <div id="calGrid"></div>
   </div>
 
-  <!-- Week warning inline note -->
-  <div id="weekWarningPanel" style="display:none; margin: -4px 12px 8px; background:#FFF2F2; border:1px solid #FECDCD; border-radius:12px; padding:11px 14px; font-size:12px; color:#D93025; line-height:1.5; animation: popupIn 0.18s ease;">
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:3px;">
-      <span style="font-weight:700; display:flex; align-items:center; gap:5px;">&#9888; Weekly Volume Risk</span>
-      <button onclick="document.getElementById('weekWarningPanel').style.display='none'" style="background:none;border:none;color:#D93025;font-size:15px;cursor:pointer;padding:0 2px;line-height:1;">&#10005;</button>
-    </div>
-    <div id="weekWarningText"></div>
-    <div id="weekWarningStat" style="margin-top:5px; padding-top:5px; border-top:1px solid #FECDCD; color:#b71c1c; font-size:11px;"></div>
-  </div>
-
-  <!-- Hard session count warning -->
-  <div id="hardCountWarningPanel" style="display:none; margin: -4px 12px 8px; background:#FFFBEA; border:1px solid #E6B800; border-radius:12px; padding:11px 14px; font-size:12px; color:#7A5500; line-height:1.5; animation: popupIn 0.18s ease;">
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:3px;">
-      <span style="font-weight:700; display:flex; align-items:center; gap:5px; color:#B38600;">&#9888; Hard Session Load</span>
-      <button onclick="document.getElementById('hardCountWarningPanel').style.display='none'" style="background:none;border:none;color:#B38600;font-size:15px;cursor:pointer;padding:0 2px;line-height:1;">&#10005;</button>
-    </div>
-    <div id="hardCountWarningText"></div>
-    <div id="hardCountWarningStat" style="margin-top:5px; padding-top:5px; border-top:1px solid #E6B800; color:#B38600; font-size:11px;"></div>
-  </div>
-
-  <!-- Hard session distance ratio warning -->
-  <div id="hardDistWarningPanel" style="display:none; margin: -4px 12px 8px; background:#FFFBEA; border:1px solid #E6B800; border-radius:12px; padding:11px 14px; font-size:12px; color:#7A5500; line-height:1.5; animation: popupIn 0.18s ease;">
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:3px;">
-      <span style="font-weight:700; display:flex; align-items:center; gap:5px; color:#B38600;">&#9888; Hard Session Distance Ratio</span>
-      <button onclick="document.getElementById('hardDistWarningPanel').style.display='none'" style="background:none;border:none;color:#B38600;font-size:15px;cursor:pointer;padding:0 2px;line-height:1;">&#10005;</button>
-    </div>
-    <div id="hardDistWarningText"></div>
-    <div id="hardDistWarningStat" style="margin-top:5px; padding-top:5px; border-top:1px solid #E6B800; color:#B38600; font-size:11px;"></div>
-  </div>
-
   <div class="summary-section">
     <div class="summary-title">Previous 6 Weeks</div>
     <div class="history-meta" id="historyMeta">
@@ -1256,6 +1295,16 @@
     <button class="popup-close" id="popupClose">&#10005;</button>
     <div class="day-popup-title" id="popupTitle"></div>
 
+    <!-- Unit Toggle -->
+    <div class="unit-toggle-row">
+      <span class="unit-toggle-label">Units</span>
+      <div class="unit-switch" id="unitSwitch">
+        <span class="unit-opt active" id="unitLabelMetric">km &amp; m</span>
+        <div class="unit-pill metric" id="unitPill"></div>
+        <span class="unit-opt" id="unitLabelImperial">mi &amp; ft</span>
+      </div>
+    </div>
+
     <div class="popup-session">
       <div class="popup-session-title">Session 1</div>
       <div class="popup-row">
@@ -1263,9 +1312,17 @@
           <label>Run type</label>
           <select class="popup-select" id="popup-act1"></select>
         </div>
-        <div class="popup-field">
-          <label>Distance</label>
+        <div class="popup-field" id="popup-dist1-field">
+          <label id="popup-dist1-label">Distance</label>
           <button class="km-display-btn" id="popup-km1" type="button">—</button>
+        </div>
+      </div>
+      <div class="elevation-row" id="elevation-row-1">
+        <div class="popup-row">
+          <div class="popup-field" style="grid-column: 2;">
+            <label id="popup-elev1-label">Elevation gain</label>
+            <button class="km-display-btn" id="popup-elev1" type="button">—</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1277,18 +1334,22 @@
           <label>Run type</label>
           <select class="popup-select" id="popup-act2"></select>
         </div>
-        <div class="popup-field">
-          <label>Distance</label>
+        <div class="popup-field" id="popup-dist2-field">
+          <label id="popup-dist2-label">Distance</label>
           <button class="km-display-btn" id="popup-km2" type="button">—</button>
+        </div>
+      </div>
+      <div class="elevation-row" id="elevation-row-2">
+        <div class="popup-row">
+          <div class="popup-field" style="grid-column: 2;">
+            <label id="popup-elev2-label">Elevation gain</label>
+            <button class="km-display-btn" id="popup-elev2" type="button">—</button>
+          </div>
         </div>
       </div>
     </div>
 
-    <div id="popupWarning" style="display:none; margin-top:10px; background:#FFF2F2; border:1px solid #FECDCD; border-radius:10px; padding:10px 12px; font-size:12px; color:#D93025; line-height:1.5;">
-      <div style="font-weight:700; margin-bottom:3px; display:flex; align-items:center; gap:5px;">&#9888; Injury Risk</div>
-      <div id="popupWarningText"></div>
-      <div id="popupWarningStat" style="margin-top:5px; padding-top:5px; border-top:1px solid #FECDCD; color:#b71c1c; font-size:11px;"></div>
-    </div>
+    <div id="popupWarningsContainer" style="margin-top:10px; display:flex; flex-direction:column; gap:8px;"></div>
 
     <button class="popup-done-btn" id="popupDoneBtn">Done</button>
   </div>
@@ -1345,6 +1406,8 @@
 
 <script>
 const STORAGE_KEY = 'rwp7';
+const UNIT_KEY = 'rwp_units'; // 'metric' or 'imperial'
+let useImperial = false; // false = km/m, true = mi/ft
 
 const ACTIVITIES = [
   { value: '', label: '—', color: 'transparent', hasKm: false },
@@ -1410,6 +1473,78 @@ function applyTheme() {
   try { localStorage.setItem('rwp_theme', darkMode ? 'dark' : 'light'); } catch(e) {}
 }
 
+function loadUnits() {
+  try {
+    const u = localStorage.getItem(UNIT_KEY);
+    useImperial = (u === 'imperial');
+  } catch(e) { useImperial = false; }
+  applyUnitUI();
+}
+
+function saveUnits() {
+  try { localStorage.setItem(UNIT_KEY, useImperial ? 'imperial' : 'metric'); } catch(e) {}
+}
+
+function applyUnitUI() {
+  const pill = document.getElementById('unitPill');
+  const lbMetric = document.getElementById('unitLabelMetric');
+  const lbImperial = document.getElementById('unitLabelImperial');
+  if (!pill) return;
+  if (useImperial) {
+    pill.classList.remove('metric'); pill.classList.add('imperial');
+    lbMetric.classList.remove('active'); lbImperial.classList.add('active');
+  } else {
+    pill.classList.add('metric'); pill.classList.remove('imperial');
+    lbMetric.classList.add('active'); lbImperial.classList.remove('active');
+  }
+  updatePopupUnitLabels();
+}
+
+function getDistUnit() { return useImperial ? 'mi' : 'km'; }
+function getElevUnit() { return useImperial ? 'ft' : 'm'; }
+
+function updatePopupUnitLabels() {
+  const act1 = document.getElementById('popup-act1');
+  const act2 = document.getElementById('popup-act2');
+  updateSessionLabels(1, act1 ? act1.value : '');
+  updateSessionLabels(2, act2 ? act2.value : '');
+}
+
+function updateSessionLabels(num, actValue) {
+  const isVertical = actValue === 'vertical';
+  const distLabel = document.getElementById('popup-dist' + num + '-label');
+  const distField = document.getElementById('popup-dist' + num + '-field');
+  const elevLabel = document.getElementById('popup-elev' + num + '-label');
+  const elevRow = document.getElementById('elevation-row-' + num);
+  if (!distLabel) return;
+  if (isVertical) {
+    // Hide distance field, show only elevation gain
+    if (distField) distField.style.display = 'none';
+    if (elevLabel) elevLabel.textContent = 'Elevation gain (' + getElevUnit() + ')';
+    if (elevRow) {
+      elevRow.classList.add('visible');
+      // Make elevation gain span the full width when distance is hidden
+      const elevField = elevRow.querySelector('.popup-field');
+      if (elevField) elevField.style.gridColumn = '1 / -1';
+    }
+  } else {
+    distLabel.textContent = 'Distance (' + getDistUnit() + ')';
+    if (distField) distField.style.display = '';
+    if (elevRow) elevRow.classList.remove('visible');
+    // Reset elevation field column span
+    if (elevRow) {
+      const elevField = elevRow.querySelector('.popup-field');
+      if (elevField) elevField.style.gridColumn = '2';
+    }
+  }
+}
+
+// Elevation state helpers
+function getElev(y, m, d)  { return parseFloat(state[k(y,m,d,'e1')]) || 0; }
+function getElev2(y, m, d) { return parseFloat(state[k(y,m,d,'e2')]) || 0; }
+function setElev(y, m, d, v)  { if (v) state[k(y,m,d,'e1')] = v; else delete state[k(y,m,d,'e1')]; }
+function setElev2(y, m, d, v) { if (v) state[k(y,m,d,'e2')] = v; else delete state[k(y,m,d,'e2')]; }
+
 function loadTheme() {
   try {
     const t = localStorage.getItem('rwp_theme');
@@ -1457,8 +1592,22 @@ function calcWeekKmFromMonday(mondayDate) {
   for (let i = 0; i < 7; i++) {
     const d = new Date(mondayDate);
     d.setDate(d.getDate() + i);
-    total += getKm(d.getFullYear(), d.getMonth(), d.getDate());
-    total += getKm2(d.getFullYear(), d.getMonth(), d.getDate());
+    const y = d.getFullYear(), mo = d.getMonth(), day = d.getDate();
+    if (getAct(y, mo, day) !== 'vertical') total += getKm(y, mo, day);
+    if (getAct2(y, mo, day) !== 'vertical') total += getKm2(y, mo, day);
+  }
+  return Math.round(total * 10) / 10;
+}
+
+// Like calcWeekKmFromMonday but excludes vertical sessions (used for BL baseline)
+function calcWeekRunKmFromMonday(mondayDate) {
+  let total = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(mondayDate);
+    d.setDate(d.getDate() + i);
+    const y = d.getFullYear(), mo = d.getMonth(), day = d.getDate();
+    if (getAct(y, mo, day) !== 'vertical') total += getKm(y, mo, day);
+    if (getAct2(y, mo, day) !== 'vertical') total += getKm2(y, mo, day);
   }
   return Math.round(total * 10) / 10;
 }
@@ -1485,6 +1634,18 @@ function getCurrentWeekIndex(y, m) {
   return Math.floor((today.getDate() - 1 + getOffset(y, m)) / 7);
 }
 
+function calcWeekElevFromMonday(mondayDate) {
+  let total = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(mondayDate);
+    d.setDate(d.getDate() + i);
+    const y = d.getFullYear(), mo = d.getMonth(), day = d.getDate();
+    if (getAct(y, mo, day) === 'vertical') total += getElev(y, mo, day);
+    if (getAct2(y, mo, day) === 'vertical') total += getElev2(y, mo, day);
+  }
+  return Math.round(total);
+}
+
 function getPrev6Weeks(y, m) {
   const today = new Date();
   const thisMonday = getMondayOf(today);
@@ -1493,8 +1654,10 @@ function getPrev6Weeks(y, m) {
   weekMonday.setDate(weekMonday.getDate() - 7);
   while (collected.length < 6) {
     const km = calcWeekKmFromMonday(weekMonday);
+    const runKm = calcWeekRunKmFromMonday(weekMonday);
+    const elev = calcWeekElevFromMonday(weekMonday);
     const label = weekMonday.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-    collected.unshift({ km, label });
+    collected.unshift({ km, runKm, elev, label });
     weekMonday.setDate(weekMonday.getDate() - 7);
   }
   return collected;
@@ -1503,7 +1666,7 @@ function getPrev6Weeks(y, m) {
 function calcAvg3(y, m) {
   const weeks = getPrev6Weeks(y, m); // still get 6 for bars, but avg uses last 3
   const last3 = weeks.slice(-3);
-  const avg = last3.length > 0 ? Math.round(last3.reduce((s, w) => s + w.km, 0) / last3.length) : 0;
+  const avg = last3.length > 0 ? Math.round(last3.reduce((s, w) => s + w.runKm, 0) / last3.length) : 0;
   // mark last 3 weeks highlighted in the history chart
   const last3indices = new Set(weeks.map((_, i) => i).slice(-3));
   return { avg, top3indices: last3indices };
@@ -1547,41 +1710,93 @@ function openDayPopup(y, m, d) {
   populatePopupKm('popup-km1', km1);
   populatePopupKm('popup-km2', km2);
 
+  // Elevation gain
+  const elev1 = getElev(y, m, d);
+  const elev2 = getElev2(y, m, d);
+  populatePopupKm('popup-elev1', elev1);
+  populatePopupKm('popup-elev2', elev2);
+
+  // Update session labels (distance vs elevation gain, unit suffixes)
+  updateSessionLabels(1, act1);
+  updateSessionLabels(2, act2);
+
   const info1 = ACT_MAP[act1] || ACT_MAP[''];
   document.getElementById('popup-km1').disabled = !info1.hasKm;
   const info2 = ACT_MAP[act2] || ACT_MAP[''];
   document.getElementById('popup-km2').disabled = !info2.hasKm;
 
-  // Injury warning inside popup
-  const warningEl = document.getElementById('popupWarning');
-  const warningText = document.getElementById('popupWarningText');
-  const warningStat = document.getElementById('popupWarningStat');
-  const risk1 = info1.hasKm && km1 > 0 ? checkSessionRisk(km1, y, m, d) : null;
-  const risk2 = info2.hasKm && km2 > 0 ? checkSessionRisk(km2, y, m, d) : null;
+  // Warnings inside popup — injury (per session), vertical, proximity, weekly warnings
+  const container = document.getElementById('popupWarningsContainer');
+  container.innerHTML = '';
 
-  // Proximity risk check
+  const risk1 = info1.hasKm && km1 > 0 && act1 !== 'vertical' ? checkSessionRisk(km1, y, m, d) : null;
+  const risk2 = info2.hasKm && km2 > 0 && act2 !== 'vertical' ? checkSessionRisk(km2, y, m, d) : null;
   const proxRisk = checkProximityRisk(y, m, d);
 
-  if (risk1 || risk2 || proxRisk) {
-    warningEl.style.display = 'block';
-    const lines = [];
-    const stats = [];
-    if (risk1) {
-      lines.push((km2 > 0 ? 'Session 1: ' : '') + risk1.msg);
-      stats.push((km2 > 0 ? 'S1 ' : '') + 'This run: ' + risk1.km + '  |  Recent longest: ' + risk1.longestRecent);
-    }
-    if (risk2) {
-      lines.push('Session 2: ' + risk2.msg);
-      stats.push('S2 This run: ' + risk2.km + '  |  Recent longest: ' + risk2.longestRecent);
-    }
-    if (proxRisk) {
-      lines.push('⏱ Hard session proximity: ' + proxRisk.myLabel + ' is within 48h of another hard effort. Allow more recovery.');
-      stats.push(proxRisk.nearby.join('  ·  '));
-    }
-    warningText.textContent = lines.join(' ');
-    warningStat.textContent = stats.join('  ·  ');
-  } else {
-    warningEl.style.display = 'none';
+  // Vertical load warnings — check directly if this day has a vertical session
+  const hasVerticalSession = act1 === 'vertical' || act2 === 'vertical';
+  const vertWarnInfo = hasVerticalSession ? checkVerticalLoadWarningForMonday(getMondayOf(new Date(y, m, d))) : null;
+
+  // Weekly-level warnings — scoped to the actual week of the day being opened
+  const dayMonday = getMondayOf(new Date(y, m, d));
+  const countWarn = checkHardSessionCountWarning(dayMonday);
+  const distWarn = checkHardSessionDistRatioWarning(dayMonday);
+  const weeklyVertWarn = (!vertWarnInfo) ? null : null; // already covered by vertWarnInfo above
+
+  function makeWarningBlock(icon, title, body, stat, colors) {
+    const el = document.createElement('div');
+    el.style.cssText = 'background:' + colors.bg + '; border:1px solid ' + colors.border + '; border-radius:10px; padding:10px 12px; font-size:12px; line-height:1.5;';
+    el.innerHTML =
+      '<div style="font-weight:700; margin-bottom:3px; display:flex; align-items:center; gap:5px; color:' + colors.title + '">' + icon + ' ' + title + '</div>' +
+      '<div style="color:' + colors.body + '">' + body + '</div>' +
+      (stat ? '<div style="margin-top:5px; padding-top:5px; border-top:1px solid ' + colors.border + '; color:' + colors.stat + '; font-size:11px;">' + stat + '</div>' : '');
+    return el;
+  }
+
+  // Show injury risk — one block per session if both trigger
+  if (risk1) {
+    const label = risk2 ? 'Injury Risk — Session 1' : 'Injury Risk';
+    container.appendChild(makeWarningBlock('&#9888;', label, risk1.msg,
+      'This run: ' + risk1.km + ' ' + getDistUnit() + '  |  Recent longest: ' + risk1.longestRecent + ' ' + getDistUnit(),
+      { bg: '#FFF2F2', border: '#FECDCD', title: '#D93025', body: '#D93025', stat: '#b71c1c' }));
+  }
+  if (risk2) {
+    container.appendChild(makeWarningBlock('&#9888;', 'Injury Risk — Session 2', risk2.msg,
+      'This run: ' + risk2.km + ' ' + getDistUnit() + '  |  Recent longest: ' + risk2.longestRecent + ' ' + getDistUnit(),
+      { bg: '#FFF2F2', border: '#FECDCD', title: '#D93025', body: '#D93025', stat: '#b71c1c' }));
+  }
+
+  if (vertWarnInfo) {
+    container.appendChild(makeWarningBlock('&#9650;', 'Vertical Load', vertWarnInfo.msg, vertWarnInfo.stat,
+      { bg: '#F3F0FA', border: '#B39DDB', title: '#6B4EAA', body: '#4A3070', stat: '#6B4EAA' }));
+  }
+
+  if (proxRisk) {
+    container.appendChild(makeWarningBlock('&#9201;', 'Hard Session Proximity',
+      proxRisk.myLabel + ' is within 48h of another hard session. Recovery between hard efforts may be insufficient.',
+      proxRisk.nearby.join('  ·  '),
+      { bg: '#FFFBEA', border: '#E6B800', title: '#B38600', body: '#7A5500', stat: '#B38600' }));
+  }
+
+  if (countWarn) {
+    container.appendChild(makeWarningBlock('&#9888;', 'Hard Session Load', countWarn.msg, countWarn.stat,
+      { bg: '#FFFBEA', border: '#E6B800', title: '#B38600', body: '#7A5500', stat: '#B38600' }));
+  }
+
+  if (distWarn) {
+    container.appendChild(makeWarningBlock('&#9888;', 'Hard Session Distance Ratio', distWarn.msg, distWarn.stat,
+      { bg: '#FFFBEA', border: '#E6B800', title: '#B38600', body: '#7A5500', stat: '#B38600' }));
+  }
+
+  // Weekly volume risk for the day's week
+  const dayMon = getMondayOf(new Date(y, m, d));
+  const dayWeekKm = calcWeekKmFromMonday(dayMon);
+  const { avg: dayAvg6 } = calcAvg3(y, m);
+  const weekRisk = checkWeekRisk(dayWeekKm, dayAvg6);
+  if (weekRisk) {
+    container.appendChild(makeWarningBlock('&#9888;', 'Weekly Volume Risk', weekRisk.msg,
+      'This week: ' + weekRisk.weekKm + ' ' + getDistUnit() + '  |  Baseline: ' + weekRisk.avg6 + ' ' + getDistUnit(),
+      { bg: '#FFF2F2', border: '#FECDCD', title: '#D93025', body: '#D93025', stat: '#b71c1c' }));
   }
 
   document.getElementById('dayPopupOverlay').classList.add('open');
@@ -1615,6 +1830,8 @@ function saveDayPopup() {
   const km1 = parseFloat(document.getElementById('popup-km1').dataset.km) || 0;
   const act2 = document.getElementById('popup-act2').value;
   const km2 = parseFloat(document.getElementById('popup-km2').dataset.km) || 0;
+  const elev1 = parseFloat(document.getElementById('popup-elev1').dataset.km) || 0;
+  const elev2 = parseFloat(document.getElementById('popup-elev2').dataset.km) || 0;
 
   const info1 = ACT_MAP[act1] || ACT_MAP[''];
   const info2 = ACT_MAP[act2] || ACT_MAP[''];
@@ -1623,6 +1840,8 @@ function saveDayPopup() {
   setKm(popupY, popupM, popupD, info1.hasKm ? km1 : 0);
   setAct2(popupY, popupM, popupD, act2);
   setKm2(popupY, popupM, popupD, info2.hasKm ? km2 : 0);
+  setElev(popupY, popupM, popupD, act1 === 'vertical' ? elev1 : 0);
+  setElev2(popupY, popupM, popupD, act2 === 'vertical' ? elev2 : 0);
 
   closeDayPopup();
   renderCalendar();
@@ -1646,33 +1865,6 @@ function renderCalendar() {
   const now = new Date();
   document.getElementById('monthTitle').textContent =
     new Date(y,m,1).toLocaleDateString('en-GB',{month:'long',year:'numeric'});
-
-  // Hide week warning panel on re-render
-  const wwp = document.getElementById('weekWarningPanel');
-  if (wwp) wwp.style.display = 'none';
-
-  // Hard session warnings — only relevant for the current month view
-  const hardCountPanel = document.getElementById('hardCountWarningPanel');
-  const hardDistPanel = document.getElementById('hardDistWarningPanel');
-  if (hardCountPanel) hardCountPanel.style.display = 'none';
-  if (hardDistPanel) hardDistPanel.style.display = 'none';
-
-  const today2 = new Date();
-  const isCurrentMonthView = (y === today2.getFullYear() && m === today2.getMonth());
-  if (isCurrentMonthView) {
-    const countWarn = checkHardSessionCountWarning();
-    if (countWarn && hardCountPanel) {
-      document.getElementById('hardCountWarningText').textContent = countWarn.msg;
-      document.getElementById('hardCountWarningStat').textContent = countWarn.stat;
-      hardCountPanel.style.display = 'block';
-    }
-    const distWarn = checkHardSessionDistRatioWarning();
-    if (distWarn && hardDistPanel) {
-      document.getElementById('hardDistWarningText').textContent = distWarn.msg;
-      document.getElementById('hardDistWarningStat').textContent = distWarn.stat;
-      hardDistPanel.style.display = 'block';
-    }
-  }
 
   const days = getDays(y,m), off = getOffset(y,m), numWeeks = getWeeks(y,m);
   const today = new Date();
@@ -1730,29 +1922,12 @@ function renderCalendar() {
           s1.style.color = info1.color;
           s1.textContent = info1.label.replace(' Run','').replace('Short Int.','S.Int').replace('Long Int.','L.Int');
           cell.appendChild(s1);
-          if (km1 > 0) {
+          const displayVal1 = (act1 === 'vertical') ? getElev(y, m, dayNum) : km1;
+          if (displayVal1 > 0) {
             const k1 = document.createElement('div');
             k1.className = 'session-km';
             k1.style.color = info1.color;
-            // Check injury risk
-            const risk1 = checkSessionRisk(km1, y, m, dayNum);
-            if (risk1) {
-              k1.style.color = '#D93025';
-              const badge = document.createElement('span');
-              badge.className = 'injury-badge';
-              badge.textContent = '!';
-              badge.title = '';
-              badge.addEventListener('click', (e) => {
-                e.stopPropagation();
-                showInjuryTooltip(badge, 'Single Session Risk',
-                  risk1.msg,
-                  'This run: <strong>' + risk1.km + '</strong> &nbsp;|&nbsp; Recent longest: <strong>' + risk1.longestRecent + '</strong>'
-                );
-                openDayPopup(y, m, dayNum);
-              });
-              cell.appendChild(badge);
-            }
-            k1.textContent = km1;
+            k1.textContent = displayVal1;
             cell.appendChild(k1);
           }
         }
@@ -1762,29 +1937,12 @@ function renderCalendar() {
           s2.style.color = info2.color;
           s2.textContent = info2.label.replace(' Run','').replace('Short Int.','S.Int').replace('Long Int.','L.Int');
           cell.appendChild(s2);
-          if (km2 > 0) {
+          const displayVal2 = (act2 === 'vertical') ? getElev2(y, m, dayNum) : km2;
+          if (displayVal2 > 0) {
             const k2 = document.createElement('div');
             k2.className = 'session-km';
-            // Check injury risk
-            const risk2 = checkSessionRisk(km2, y, m, dayNum);
-            if (risk2) {
-              k2.style.color = '#D93025';
-              const badge2 = document.createElement('span');
-              badge2.className = 'injury-badge';
-              badge2.textContent = '!';
-              badge2.addEventListener('click', (e) => {
-                e.stopPropagation();
-                showInjuryTooltip(badge2, 'Single Session Risk',
-                  risk2.msg,
-                  'This run: <strong>' + risk2.km + '</strong> &nbsp;|&nbsp; Recent longest: <strong>' + risk2.longestRecent + '</strong>'
-                );
-                openDayPopup(y, m, dayNum);
-              });
-              cell.appendChild(badge2);
-            } else {
-              k2.style.color = info2.color;
-            }
-            k2.textContent = km2;
+            k2.style.color = info2.color;
+            k2.textContent = displayVal2;
             cell.appendChild(k2);
           }
         }
@@ -1796,22 +1954,26 @@ function renderCalendar() {
           cell.appendChild(empty);
         }
 
-        // Proximity warning badge (hard sessions within 48h of each other)
-        if (dayHasHardSession(y, m, dayNum)) {
-          const proxInfo = checkProximityRisk(y, m, dayNum);
-          if (proxInfo) {
-            const proxBadge = document.createElement('span');
-            proxBadge.className = 'proximity-badge';
-            proxBadge.textContent = '⏱';
-            proxBadge.title = '';
-            proxBadge.addEventListener('click', (e) => {
-              e.stopPropagation();
-              showProximityTooltip(proxBadge, proxInfo);
-              openDayPopup(y, m, dayNum);
-            });
-            cell.appendChild(proxBadge);
+        // Single unified warning badge — only on days with user input, if any warning triggers
+        (function() {
+          if (!act1 && !act2) return;
+          const hasVertical = act1 === 'vertical' || act2 === 'vertical';
+          const dayMonday = getMondayOf(new Date(y, m, dayNum));
+          const hasAnyWarning = (
+            (info1.hasKm && km1 > 0 && act1 !== 'vertical' && checkSessionRisk(km1, y, m, dayNum)) ||
+            (info2.hasKm && km2 > 0 && act2 !== 'vertical' && checkSessionRisk(km2, y, m, dayNum)) ||
+            (hasVertical && (checkVerticalRiskForDay(y, m, dayNum) || checkVerticalLoadWarningForMonday(dayMonday))) ||
+            (dayHasHardSession(y, m, dayNum) && checkProximityRisk(y, m, dayNum)) ||
+            checkHardSessionCountWarning(dayMonday) ||
+            checkHardSessionDistRatioWarning(dayMonday)
+          );
+          if (hasAnyWarning) {
+            const warnBadge = document.createElement('span');
+            warnBadge.className = 'day-warn-badge';
+            warnBadge.textContent = '!';
+            cell.appendChild(warnBadge);
           }
-        }
+        })();
 
         const dayNumCopy = dayNum;
         cell.addEventListener('click', () => openDayPopup(y, m, dayNumCopy));
@@ -1894,16 +2056,20 @@ function updateWeekKm(w, row, avg6) {
 function renderHistory() {
   const weeks = getPrev6Weeks(currentYear, currentMonth);
   const { top3indices } = calcAvg3(currentYear, currentMonth);
-  const maxKm = Math.max(...weeks.map(w=>w.km), 1);
-  document.getElementById('historyBars').innerHTML = weeks.map((w, i)=>`
-    <div class="bar-row">
-      <span class="bar-label">${w.label}</span>
-      <div class="bar-track">
-        <div class="bar-fill ${top3indices.has(i) ? 'top3' : ''}" style="width:${Math.round((w.km/maxKm)*100)}%"></div>
-      </div>
-      <span class="bar-km">${w.km}</span>
-    </div>
-  `).join('');
+  const maxKm = Math.max(...weeks.map(w=>w.runKm), 1);
+  document.getElementById('historyBars').innerHTML = weeks.map((w, i) => {
+    const elevHtml = w.elev > 0
+      ? '<span class="bar-elev">&#8679;' + w.elev + (useImperial ? 'ft' : 'm') + '</span>'
+      : '';
+    return '<div class="bar-row">' +
+      '<span class="bar-label">' + w.label + '</span>' +
+      '<div class="bar-track">' +
+        '<div class="bar-fill ' + (top3indices.has(i) ? 'top3' : '') + '" style="width:' + Math.round((w.runKm/maxKm)*100) + '%"></div>' +
+      '</div>' +
+      '<span class="bar-km">' + w.runKm + '</span>' +
+      elevHtml +
+    '</div>';
+  }).join('');
 
   // Update legend label based on training state
   const { state: tState } = detectTrainingState();
@@ -1946,6 +2112,7 @@ function sendMessage(name, email, message) {
 function init() {
   loadState();
   loadTheme();
+  loadUnits();
   const now = new Date();
   currentYear = now.getFullYear(); currentMonth = now.getMonth();
 
@@ -2037,28 +2204,47 @@ function init() {
     if (e.target === document.getElementById('dayPopupOverlay')) closeDayPopup();
   });
 
-  // Popup act selects update km disabled state
+  // Popup act selects update km disabled state and session labels
   document.getElementById('popup-act1').addEventListener('change', function() {
     const info = ACT_MAP[this.value] || ACT_MAP[''];
     const btn = document.getElementById('popup-km1');
     btn.disabled = !info.hasKm;
     if (!info.hasKm) { btn.dataset.km = ''; btn.textContent = '—'; btn.classList.remove('has-value'); }
+    updateSessionLabels(1, this.value);
   });
   document.getElementById('popup-act2').addEventListener('change', function() {
     const info = ACT_MAP[this.value] || ACT_MAP[''];
     const btn = document.getElementById('popup-km2');
     btn.disabled = !info.hasKm;
     if (!info.hasKm) { btn.dataset.km = ''; btn.textContent = '—'; btn.classList.remove('has-value'); }
+    updateSessionLabels(2, this.value);
+  });
+
+  // Unit toggle
+  document.getElementById('unitSwitch').addEventListener('click', function() {
+    useImperial = !useImperial;
+    saveUnits();
+    applyUnitUI();
   });
 
   // Keypad
-  let keypadTarget = null; // 'popup-km1' or 'popup-km2'
+  let keypadTarget = null; // 'popup-km1', 'popup-km2', 'popup-elev1', 'popup-elev2'
   let keypadValue = '';
+  let keypadIsElev = false;
 
-  function openKeypad(targetId) {
+  function openKeypad(targetId, isElev) {
     keypadTarget = targetId;
+    keypadIsElev = !!isElev;
     const btn = document.getElementById(targetId);
     keypadValue = btn.dataset.km || '';
+    const label = document.getElementById('keypadLabel');
+    if (label) {
+      if (isElev) {
+        label.textContent = 'Elevation gain (' + getElevUnit() + ')';
+      } else {
+        label.textContent = 'Distance (' + getDistUnit() + ')';
+      }
+    }
     updateKeypadDisplay();
     document.getElementById('keypadOverlay').classList.add('open');
   }
@@ -2088,10 +2274,16 @@ function init() {
   }
 
   document.getElementById('popup-km1').addEventListener('click', function() {
-    if (!this.disabled) openKeypad('popup-km1');
+    if (!this.disabled) openKeypad('popup-km1', false);
   });
   document.getElementById('popup-km2').addEventListener('click', function() {
-    if (!this.disabled) openKeypad('popup-km2');
+    if (!this.disabled) openKeypad('popup-km2', false);
+  });
+  document.getElementById('popup-elev1').addEventListener('click', function() {
+    if (!this.disabled) openKeypad('popup-elev1', true);
+  });
+  document.getElementById('popup-elev2').addEventListener('click', function() {
+    if (!this.disabled) openKeypad('popup-elev2', true);
   });
 
   document.querySelectorAll('.kp-btn').forEach(btn => {
@@ -2149,7 +2341,7 @@ function getWeeklyTotals(numWeeks = 6) {
   for (let i = numWeeks; i >= 1; i--) {
     const mon = new Date(thisMonday);
     mon.setDate(mon.getDate() - i * 7);
-    totals.push(calcWeekKmFromMonday(mon));
+    totals.push(calcWeekRunKmFromMonday(mon));
   }
   return totals;
 }
@@ -2196,7 +2388,7 @@ function detectTrainingState() {
   for (let i = 1; i <= 6; i++) {
     const mon = new Date(thisMonday);
     mon.setDate(mon.getDate() - i * 7);
-    weeks.push(calcWeekKmFromMonday(mon)); // weeks[0] = last week, weeks[5] = 6 weeks ago
+    weeks.push(calcWeekRunKmFromMonday(mon)); // weeks[0] = last week, weeks[5] = 6 weeks ago
   }
 
   const lastWeek = weeks[0];
@@ -2320,6 +2512,128 @@ function checkWeekRisk(weekKm, _legacyBaseline) {
   }
 
   return { pct, avg6: baseline, weekKm, level, msg, state, stateLabel, baselineLabel };
+}
+
+// ── VERTICAL LOAD WARNING ──
+
+// Unit-independent vertical load check per the spec.
+// total_distance: total weekly running distance across all session types (trail community standard)
+// total_vertical: this week's total elevation gain from vertical sessions
+// prev_vertical_avg: average weekly elevation over previous 6 weeks
+function calcVerticalLoad(total_distance, total_vertical, prev_vertical_avg, imperial) {
+  if (!total_distance || total_distance <= 0 || !total_vertical || total_vertical <= 0) return null;
+  const ratio = total_vertical / total_distance;
+  // Thresholds: m/km vs ft/mi (1 m/km ≈ 5.28 ft/mi)
+  const highThreshold     = imperial ? 800 : 150;
+  const moderateThreshold = imperial ? 640 : 120;
+  const high_vertical = ratio > highThreshold;
+  const moderate_vertical = !high_vertical && ratio > moderateThreshold;
+  const progression = prev_vertical_avg > 0 ? total_vertical / prev_vertical_avg : null;
+  const progression_warning = progression !== null && progression > 1.20;
+  const progression_caution = !progression_warning && progression !== null && progression > 1.15;
+  return {
+    ratio: Math.round(ratio * 10) / 10,
+    moderate_vertical,
+    high_vertical,
+    progression: progression !== null ? Math.round(progression * 100) / 100 : null,
+    progression_caution,
+    progression_warning
+  };
+}
+
+// Returns 'high', 'moderate', or null for a specific day's vertical session,
+// based on the ratio of the week's total elevation to total running distance.
+function checkVerticalRiskForDay(y, m, d) {
+  const mon = getMondayOf(new Date(y, m, d));
+  let weekDist = 0, weekElev = 0;
+  for (let i = 0; i < 7; i++) {
+    const dt = new Date(mon);
+    dt.setDate(dt.getDate() + i);
+    const dy = dt.getFullYear(), dm = dt.getMonth(), dd = dt.getDate();
+    const a1 = getAct(dy, dm, dd), a2 = getAct2(dy, dm, dd);
+    if (a1) weekDist += getKm(dy, dm, dd);
+    if (a2) weekDist += getKm2(dy, dm, dd);
+    if (a1 === 'vertical') weekElev += getElev(dy, dm, dd);
+    if (a2 === 'vertical') weekElev += getElev2(dy, dm, dd);
+  }
+  if (weekDist <= 0 || weekElev <= 0) return null;
+  const ratio = weekElev / weekDist;
+  const highThreshold     = useImperial ? 800 : 150;
+  const moderateThreshold = useImperial ? 640 : 120;
+  if (ratio > highThreshold) return 'high';
+  if (ratio > moderateThreshold) return 'moderate';
+  return null;
+}
+
+function checkVerticalLoadWarningForMonday(mon) {
+  // weekDist = total running distance across all session types (the denominator for the ratio,
+  // per the trail community standard: total elevation / total distance for the week)
+  let weekDist = 0, weekElev = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(mon);
+    d.setDate(d.getDate() + i);
+    const y = d.getFullYear(), mo = d.getMonth(), day = d.getDate();
+    const act1 = getAct(y, mo, day), act2 = getAct2(y, mo, day);
+    const km1 = getKm(y, mo, day), km2 = getKm2(y, mo, day);
+    if (act1) weekDist += km1;
+    if (act2) weekDist += km2;
+    if (act1 === 'vertical') weekElev += getElev(y, mo, day);
+    if (act2 === 'vertical') weekElev += getElev2(y, mo, day);
+  }
+  if (weekDist <= 0 || weekElev <= 0) return null;
+
+  // Previous 6 weeks avg elevation
+  const weeks = getPrev6Weeks(currentYear, currentMonth);
+  const avgElev = weeks.length > 0
+    ? weeks.reduce((s, w) => s + (w.elev || 0), 0) / weeks.length
+    : 0;
+
+  const result = calcVerticalLoad(weekDist, weekElev, avgElev, useImperial);
+  if (!result) return null;
+  if (!result.high_vertical && !result.moderate_vertical && !result.progression_warning && !result.progression_caution) return null;
+
+  const elevUnit = getElevUnit();
+  const distUnit = getDistUnit();
+  const parts = [];
+  const stats = [];
+
+  if (result.high_vertical) {
+    parts.push('High vertical load (' + result.ratio + ' ' + elevUnit + '/' + distUnit + '). Ensure adequate recovery between sessions.');
+  } else if (result.moderate_vertical) {
+    parts.push('Moderate vertical load (' + result.ratio + ' ' + elevUnit + '/' + distUnit + '). Monitor leg fatigue.');
+  }
+
+  if (result.progression_warning) {
+    const pct = Math.round((result.progression - 1) * 100);
+    parts.push('Elevation gain is ' + pct + '% above your recent average. Increase vertical gradually to reduce injury risk.');
+  } else if (result.progression_caution) {
+    const pct = Math.round((result.progression - 1) * 100);
+    parts.push('Elevation gain is ' + pct + '% above your recent average. Watch your load.');
+  }
+
+  stats.push(
+    'Week elev: ' + Math.round(weekElev) + elevUnit +
+    '  |  6-wk avg: ' + Math.round(avgElev) + elevUnit +
+    '  |  Ratio: ' + result.ratio + ' ' + elevUnit + '/' + distUnit
+  );
+
+  return { msg: parts.join(' '), stat: stats.join(''), result };
+}
+
+// Scans all visible weeks in the current month and returns the worst vertical warning found.
+function checkVerticalLoadWarning() {
+  const numWeeks = getWeeks(currentYear, currentMonth);
+  let worst = null;
+  // severity rank: high_vertical > moderate_vertical > progression_warning > progression_caution
+  const severity = r => r.result.high_vertical ? 4 : r.result.moderate_vertical ? 3 : r.result.progression_warning ? 2 : 1;
+  for (let w = 0; w < numWeeks; w++) {
+    const mon = getWeekMonday(currentYear, currentMonth, w);
+    const warn = checkVerticalLoadWarningForMonday(mon);
+    if (warn && (!worst || severity(warn) > severity(worst))) {
+      worst = warn;
+    }
+  }
+  return worst;
 }
 
 // ── PROXIMITY WARNING ──
@@ -2447,8 +2761,8 @@ function getHardSessionDataForWeek(mondayDate) {
 }
 
 // Warning: more than 2 hard sessions in the last 7 days
-function checkHardSessionCountWarning() {
-  const mon = getCurrentWeekMonday();
+function checkHardSessionCountWarning(mondayDate) {
+  const mon = mondayDate || getCurrentWeekMonday();
   const { hardCount, sessions } = getHardSessionDataForWeek(mon);
   if (hardCount <= 2) return null;
   return {
@@ -2459,8 +2773,8 @@ function checkHardSessionCountWarning() {
 }
 
 // Warning: hard session weekly distance > 20% of total running distance
-function checkHardSessionDistRatioWarning() {
-  const mon = getCurrentWeekMonday();
+function checkHardSessionDistRatioWarning(mondayDate) {
+  const mon = mondayDate || getCurrentWeekMonday();
   const { hardKm, totalKm } = getHardSessionDataForWeek(mon);
   if (totalKm <= 0 || hardKm <= 0) return null;
   const ratio = hardKm / totalKm;
@@ -2468,7 +2782,7 @@ function checkHardSessionDistRatioWarning() {
   const pct = Math.round(ratio * 100);
   return {
     msg: 'Hard session distance makes up ' + pct + '% of your total weekly running distance. Keeping hard efforts below 20% of weekly volume helps reduce injury risk.',
-    stat: 'Hard session km: ' + hardKm + '  |  Total week km: ' + totalKm + '  |  Ratio: ' + pct + '%',
+    stat: 'Hard session ' + getDistUnit() + ': ' + hardKm + '  |  Total week ' + getDistUnit() + ': ' + totalKm + '  |  Ratio: ' + pct + '%',
     pct,
     hardKm,
     totalKm
@@ -2510,7 +2824,7 @@ function hideProximityTooltip(delay = 200) {
 }
 
 document.addEventListener('click', (e) => {
-  if (!proximityTooltip.contains(e.target) && !e.target.classList.contains('proximity-badge')) {
+  if (!proximityTooltip.contains(e.target)) {
     hideProximityTooltip(0);
   }
 });
@@ -2555,7 +2869,7 @@ function hideInjuryTooltip(delay = 200) {
 }
 
 document.addEventListener('click', (e) => {
-  if (!tooltip.contains(e.target) && !e.target.classList.contains('injury-badge') && !e.target.classList.contains('week-km')) {
+  if (!tooltip.contains(e.target) && !e.target.classList.contains('week-km')) {
     hideInjuryTooltip(0);
   }
 });
