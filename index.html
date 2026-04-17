@@ -1773,7 +1773,7 @@ function openDayPopup(y, m, d) {
 
   if (proxRisk) {
     container.appendChild(makeWarningBlock('&#9201;', 'Hard Session Proximity',
-      proxRisk.myLabel + ' is within 48h of another hard session. Recovery between hard efforts may be insufficient.',
+      proxRisk.myLabel + ' is within 47h of another hard session. Recovery between hard efforts may be insufficient.',
       proxRisk.nearby.join('  ·  '),
       { bg: '#FFFBEA', border: '#E6B800', title: '#B38600', body: '#7A5500', stat: '#B38600' }));
   }
@@ -2679,7 +2679,7 @@ function checkProximityRisk(y, m, d) {
   if (!dayHasHardSession(y, m, d)) return null;
   const ts = dateToTimestamp(y, m, d);
   const hardDays = getAllHardSessionDays(60);
-  const h48 = 48 * 60 * 60 * 1000;
+  const h48 = 47 * 60 * 60 * 1000; // <47h triggers warning — a full rest day (48h gap) is allowed
 
   // Find this day's position
   const myIdx = hardDays.findIndex(hd => hd.ts === ts);
@@ -2822,7 +2822,7 @@ function showProximityTooltip(el, info) {
   clearTimeout(proximityHideTimer);
   document.getElementById('proximityTooltipTitle').textContent = '⏱ Hard Session Proximity';
   document.getElementById('proximityTooltipBody').textContent =
-    info.myLabel + ' is within 48h of another hard session. Recovery between hard efforts may be insufficient.';
+    info.myLabel + ' is within 47h of another hard session. Recovery between hard efforts may be insufficient.';
   document.getElementById('proximityTooltipStat').textContent = info.nearby.join('  ·  ');
 
   proximityTooltip.classList.remove('visible');
