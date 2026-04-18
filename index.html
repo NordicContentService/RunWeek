@@ -1193,6 +1193,36 @@
 
   /* week warning tooltip */
   .week-km.is-over { cursor: pointer; }
+  .week-km.is-current { cursor: pointer; }
+  .week-km.is-caution { cursor: pointer; }
+
+  /* ── INLINE WEEKLY WARNING PANEL ── */
+  .week-warning-panel {
+    display: none;
+    margin: 2px 0 6px;
+    background: #FFF5F5;
+    border: 1.5px solid #FECDCD;
+    border-radius: 12px;
+    padding: 11px 14px 10px;
+    animation: warnFadeIn 0.18s ease;
+  }
+  [data-theme="dark"] .week-warning-panel { background: #2A1010; border-color: #7A2020; }
+  .week-warning-panel.visible { display: block; }
+  .week-warning-panel.is-caution { background: #FFFBEA; border-color: #E6B800; }
+  [data-theme="dark"] .week-warning-panel.is-caution { background: #2A2200; border-color: #E6B800; }
+  @keyframes warnFadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .wwp-entry { margin-bottom: 8px; }
+  .wwp-entry:last-child { margin-bottom: 0; }
+  .wwp-title { font-size: 12px; font-weight: 700; color: #D93025; margin-bottom: 4px; display: flex; align-items: center; gap: 5px; }
+  .wwp-title.caution { color: #B38600; }
+  .wwp-body { font-size: 12px; color: var(--text-primary); line-height: 1.5; margin-bottom: 4px; }
+  .wwp-stat { font-size: 11px; color: var(--text-secondary); padding-top: 4px; border-top: 1px solid rgba(0,0,0,0.07); }
+  [data-theme="dark"] .wwp-stat { border-top-color: rgba(255,255,255,0.07); }
+  .wwp-divider { height: 1px; background: rgba(0,0,0,0.08); margin: 8px 0; }
+  [data-theme="dark"] .wwp-divider { background: rgba(255,255,255,0.08); }
   .wk-warn-icon {
     font-size: 11px;
     margin-top: 1px;
@@ -1276,6 +1306,7 @@
   <div class="cal-wrap">
     <div class="day-header-row" id="dayHeaders"></div>
     <div id="calGrid"></div>
+    <div class="week-warning-panel" id="weekWarningPanel"></div>
   </div>
 
   <div class="summary-section">
@@ -2005,29 +2036,126 @@ function renderCalendar() {
       kmCell.appendChild(avgEl);
       kmCell.appendChild(avgLbl);
 
-      if (isOver) {
+      // Collect all weekly warnings
+      const mon = getWeekMonday(y, m, w);
+      const hardCountWarn = checkHardSessionCountWarning(mon);
+      const hardRatioWarn = checkHardSessionDistRatioWarning(mon);
+      const vertLoadWarn = checkVerticalLoadWarningForMonday(mon);
+      // Check if any day this week has a proximity warning
+      let weekHasProximity = false;
+      for (let pi = 0; pi < 7; pi++) {
+        const pd = new Date(mon); pd.setDate(pd.getDate() + pi);
+        if (checkProximityRisk(pd.getFullYear(), pd.getMonth(), pd.getDate())) { weekHasProximity = true; break; }
+      }
+      const hasAnyWeekWarning = isOver || hardCountWarn || hardRatioWarn || vertLoadWarn || weekHasProximity;
+
+      if (hasAnyWeekWarning) {
         const warnIcon = document.createElement('div');
         warnIcon.className = 'wk-warn-icon' + (isWarning ? '' : ' caution');
         warnIcon.textContent = '⚠';
         kmCell.appendChild(warnIcon);
-        kmCell.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const risk = checkWeekRisk(wkm, avg6);
-          if (risk) {
-            const panel = document.getElementById('weekWarningPanel');
-            document.getElementById('weekWarningText').textContent = risk.msg;
-            const statLabel = risk.stateLabel ? risk.stateLabel + '  |  ' : '';
-            document.getElementById('weekWarningStat').textContent =
-              statLabel + 'This week: ' + risk.weekKm + '  |  Baseline (' + (risk.baselineLabel || 'recent') + '): ' + risk.avg6;
-            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-            // also show tooltip
-            showInjuryTooltip(kmCell, risk.stateLabel || 'Weekly Volume Risk',
-              risk.msg,
-              'This week: <strong>' + risk.weekKm + '</strong> &nbsp;|&nbsp; Baseline: <strong>' + risk.avg6 + '</strong>'
-            );
-          }
-        });
       }
+
+      // Always attach click handler to current week cell
+      kmCell.style.cursor = 'pointer';
+      kmCell.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const panel = document.getElementById('weekWarningPanel');
+
+        // If already open for this click, toggle off
+        if (panel.classList.contains('visible') && panel.dataset.openWeek === String(w)) {
+          panel.classList.remove('visible');
+          panel.dataset.openWeek = '';
+          return;
+        }
+
+        const warnings = [];
+
+        // Volume warning
+        const risk = checkWeekRisk(wkm, avg6);
+        if (risk) {
+          warnings.push({
+            title: '&#9888; Weekly Volume Risk',
+            caution: risk.level === 'caution',
+            msg: risk.msg,
+            stat: 'This week: ' + risk.weekKm + ' ' + getDistUnit() + '  |  Baseline: ' + risk.avg6 + ' ' + getDistUnit()
+          });
+        }
+
+        // Hard session count warning
+        const hardCountWarnNow = checkHardSessionCountWarning(mon);
+        if (hardCountWarnNow) {
+          warnings.push({
+            title: '&#9888; Hard Session Load',
+            caution: false,
+            msg: hardCountWarnNow.msg,
+            stat: hardCountWarnNow.stat
+          });
+        }
+
+        // Hard session distance ratio warning
+        const hardRatioWarnNow = checkHardSessionDistRatioWarning(mon);
+        if (hardRatioWarnNow) {
+          warnings.push({
+            title: '&#9888; Hard Session Ratio',
+            caution: true,
+            msg: hardRatioWarnNow.msg,
+            stat: hardRatioWarnNow.stat
+          });
+        }
+
+        // Vertical load warning for this week
+        const vertLoadWarnNow = checkVerticalLoadWarningForMonday(mon);
+        if (vertLoadWarnNow) {
+          const isVertCaution = !vertLoadWarnNow.result.high_vertical;
+          warnings.push({
+            title: '&#9888; Vertical Load',
+            caution: isVertCaution,
+            msg: vertLoadWarnNow.msg,
+            stat: vertLoadWarnNow.stat
+          });
+        }
+
+        // Proximity warning — collect all affected days this week
+        const proximityDays = [];
+        for (let pi = 0; pi < 7; pi++) {
+          const pd = new Date(mon); pd.setDate(pd.getDate() + pi);
+          const py = pd.getFullYear(), pm2 = pd.getMonth(), pday = pd.getDate();
+          const proxWarn = checkProximityRisk(py, pm2, pday);
+          if (proxWarn) {
+            proximityDays.push(proxWarn.myLabel + ': ' + proxWarn.nearby.join(', '));
+          }
+        }
+        if (proximityDays.length > 0) {
+          warnings.push({
+            title: '&#9888; Hard Session Proximity',
+            caution: false,
+            msg: 'One or more hard sessions this week are within 47h of another hard session. Recovery between hard efforts may be insufficient.',
+            stat: proximityDays.join('  ·  ')
+          });
+        }
+
+        if (warnings.length === 0) {
+          panel.classList.remove('visible');
+          return;
+        }
+
+        // Determine panel color: red if any severe, else caution
+        const anyRed = warnings.some(ww => !ww.caution);
+        panel.className = 'week-warning-panel visible' + (anyRed ? '' : ' is-caution');
+        panel.dataset.openWeek = String(w);
+
+        panel.innerHTML = warnings.map((ww, i) =>
+          '<div class="wwp-entry">' +
+            '<div class="wwp-title' + (ww.caution ? ' caution' : '') + '">' + ww.title + '</div>' +
+            '<div class="wwp-body">' + ww.msg + '</div>' +
+            '<div class="wwp-stat">' + ww.stat + '</div>' +
+          '</div>' +
+          (i < warnings.length - 1 ? '<div class="wwp-divider"></div>' : '')
+        ).join('');
+
+        panel.classList.add('visible');
+      });
     }
 
     row.appendChild(kmCell);
@@ -2118,11 +2246,13 @@ function init() {
 
   document.getElementById('prevBtn').addEventListener('click', () => {
     currentMonth--; if(currentMonth<0){currentMonth=11;currentYear--;}
+    const p = document.getElementById('weekWarningPanel'); if(p) { p.classList.remove('visible'); p.dataset.openWeek=''; }
     renderCalendar(); renderHistory();
   });
 
   document.getElementById('nextBtn').addEventListener('click', () => {
     currentMonth++; if(currentMonth>11){currentMonth=0;currentYear++;}
+    const p = document.getElementById('weekWarningPanel'); if(p) { p.classList.remove('visible'); p.dataset.openWeek=''; }
     renderCalendar(); renderHistory();
   });
 
@@ -2894,7 +3024,7 @@ function hideInjuryTooltip(delay = 200) {
 }
 
 document.addEventListener('click', (e) => {
-  if (!tooltip.contains(e.target) && !e.target.classList.contains('week-km')) {
+  if (!tooltip.contains(e.target) && !e.target.closest('.week-km')) {
     hideInjuryTooltip(0);
   }
 });
