@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Run Week Planner</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script defer src="/_vercel/insights/script.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1436,6 +1437,15 @@
 </div>
 
 <script>
+// ── VERCEL ANALYTICS ──
+function trackEvent(name, props) {
+  try {
+    if (typeof window.va === 'function') {
+      window.va('event', { name, ...(props || {}) });
+    }
+  } catch(e) {}
+}
+
 const STORAGE_KEY = 'rwp7';
 const UNIT_KEY = 'rwp_units'; // 'metric' or 'imperial'
 let useImperial = false; // false = km/m, true = mi/ft
@@ -1831,6 +1841,24 @@ function openDayPopup(y, m, d) {
   }
 
   document.getElementById('dayPopupOverlay').classList.add('open');
+
+  // warning_triggered: fires whenever the popup displays at least one warning
+  const warningTypes = [];
+  if (risk1 || risk2) warningTypes.push('injury_risk');
+  if (vertWarnInfo) warningTypes.push('vertical_load');
+  if (proxRisk) warningTypes.push('proximity');
+  if (countWarn) warningTypes.push('hard_session_count');
+  if (distWarn) warningTypes.push('hard_session_ratio');
+  const dayMon2 = getMondayOf(new Date(y, m, d));
+  const dayWeekKm2 = calcWeekKmFromMonday(dayMon2);
+  const { avg: dayAvg6b } = calcAvg3(y, m);
+  if (checkWeekRisk(dayWeekKm2, dayAvg6b)) warningTypes.push('weekly_volume');
+  if (warningTypes.length > 0) {
+    trackEvent('warning_triggered', {
+      warning_types: warningTypes.join(','),
+      warning_count: warningTypes.length
+    });
+  }
 }
 
 function populatePopupSelect(id, current) {
@@ -1867,6 +1895,16 @@ function saveDayPopup() {
   const info1 = ACT_MAP[act1] || ACT_MAP[''];
   const info2 = ACT_MAP[act2] || ACT_MAP[''];
 
+  // first_input: fires the very first time any activity or distance is saved
+  const hadAnyDataBefore = Object.keys(state).some(key => key.endsWith('_act') || key.endsWith('_km'));
+  const isAddingData = act1 || act2 || km1 > 0 || km2 > 0;
+  if (!hadAnyDataBefore && isAddingData) {
+    trackEvent('first_input', {
+      activity: act1 || act2 || 'unknown',
+      has_distance: km1 > 0 || km2 > 0
+    });
+  }
+
   setAct(popupY, popupM, popupD, act1);
   setKm(popupY, popupM, popupD, info1.hasKm ? km1 : 0);
   setAct2(popupY, popupM, popupD, act2);
@@ -1877,6 +1915,30 @@ function saveDayPopup() {
   closeDayPopup();
   renderCalendar();
   renderHistory();
+
+  // week_completed: fires when every day of the saved day's week now has at least one activity
+  const savedMon = getMondayOf(new Date(popupY, popupM, popupD));
+  let allDaysFilled = true;
+  let weekTotalKm = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(savedMon);
+    d.setDate(d.getDate() + i);
+    const dy = d.getFullYear(), dm = d.getMonth(), dd = d.getDate();
+    if (!getAct(dy, dm, dd) && !getAct2(dy, dm, dd)) { allDaysFilled = false; break; }
+    weekTotalKm += getKm(dy, dm, dd) + getKm2(dy, dm, dd);
+  }
+  if (allDaysFilled) {
+    // Only fire once per week — track in state
+    const wcKey = 'wc_' + savedMon.getFullYear() + '_' + savedMon.getMonth() + '_' + savedMon.getDate();
+    if (!state[wcKey]) {
+      state[wcKey] = 1;
+      saveState();
+      trackEvent('week_completed', {
+        week_total_km: Math.round(weekTotalKm * 10) / 10,
+        unit: getDistUnit()
+      });
+    }
+  }
 }
 
 function renderLegend() {
