@@ -1913,6 +1913,8 @@ function saveDayPopup() {
   setElev2(popupY, popupM, popupD, act2 === 'vertical' ? elev2 : 0);
 
   closeDayPopup();
+  const panel = document.getElementById('weekWarningPanel');
+  if (panel) { panel.classList.remove('visible'); panel.dataset.openWeek = ''; }
   renderCalendar();
   renderHistory();
 
