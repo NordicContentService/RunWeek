@@ -2243,6 +2243,7 @@ function updateWeekKm(w, row, avg6) {
     const avgEl = cell.querySelector('.wk-avg');
     if (avgEl) avgEl.className = 'wk-avg ' + (isWarning ? 'over' : isOver ? 'caution' : 'normal');
   }
+  maybeTrackCompletedWeek(getWeekMonday(currentYear, currentMonth, w));
 }
 
 function renderHistory() {
@@ -3092,6 +3093,58 @@ document.addEventListener('click', (e) => {
     hideInjuryTooltip(0);
   }
 });
+
+// ── RETENTION TRACKING ──
+
+function getUserId() {
+  let id = localStorage.getItem('rw_user_id');
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem('rw_user_id', id);
+  }
+  return id;
+}
+
+function getWeekKey(mondayDate) {
+  const y = mondayDate.getFullYear();
+  const start = new Date(y, 0, 1);
+  const dayOfYear = Math.floor((mondayDate - start) / 86400000);
+  const weekNum = Math.ceil((dayOfYear + start.getDay() + 1) / 7);
+  return y + '-W' + String(weekNum).padStart(2, '0');
+}
+
+function countDaysWithDataFromMonday(mondayDate) {
+  let count = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(mondayDate);
+    d.setDate(d.getDate() + i);
+    const y = d.getFullYear(), m = d.getMonth(), day = d.getDate();
+    const act1 = getAct(y, m, day), act2 = getAct2(y, m, day);
+    const km1 = getKm(y, m, day), km2 = getKm2(y, m, day);
+    const elev1 = getElev(y, m, day), elev2 = getElev2(y, m, day);
+    const s1Valid = (act1 && act1 !== 'vertical' && km1 > 0.5) || (act1 === 'vertical' && elev1 > 0);
+    const s2Valid = (act2 && act2 !== 'vertical' && km2 > 0.5) || (act2 === 'vertical' && elev2 > 0);
+    if (s1Valid || s2Valid) count++;
+  }
+  return count;
+}
+
+function maybeTrackCompletedWeek(mondayDate) {
+  try {
+    if (countDaysWithDataFromMonday(mondayDate) < 2) return;
+    const weekKey = getWeekKey(mondayDate);
+    const sent = JSON.parse(localStorage.getItem('rw_sent') || '[]');
+    if (sent.includes(weekKey)) return;
+    const user_id = getUserId();
+    fetch('/api/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id, week: weekKey })
+    }).catch(() => {});
+    sent.push(weekKey);
+    localStorage.setItem('rw_sent', JSON.stringify(sent));
+  } catch (e) {}
+}
 
 init();
 </script>
